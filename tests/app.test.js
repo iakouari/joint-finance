@@ -190,6 +190,14 @@ async function addExpense(p, amount, note, opts = {}) {
     await p.emulateMedia({ colorScheme: "dark" }); await tab(p, "vouchers"); await p.screenshot({ path: `${shots}/jf-dark.png` });
   }
 
+  // ---------- Opens with no internet (service worker) ----------
+  await p.evaluate(() => navigator.serviceWorker.ready);
+  await p.reload();
+  await p.context().setOffline(true);
+  await p.reload();
+  check("opens offline", (await p.title()) === "Joint Finance Tracker" && (await p.evaluate(() => state.transactions.length)) === n);
+  await p.context().setOffline(false);
+
   check("no page errors", p.errs.length === 0, p.errs.join(" | "));
   await browser.close();
   server.close();

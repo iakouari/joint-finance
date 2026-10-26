@@ -1,4 +1,4 @@
--- Pocket Ledger: shared-ledger sync server.
+-- Joint Finance Tracker: shared-ledger sync server.
 -- Paste this whole file into Supabase → SQL Editor → New query → Run.
 --
 -- What the server stores: one row per transaction, category or setting, but
@@ -61,6 +61,14 @@ begin
     where length(coalesce(r->>'data', '')) > 20000 or length(r->>'id') > 100 or r->>'id' is null
   ) then
     raise exception 'row too large';
+  end if;
+  -- Usage limits, so nobody can fill the free database with junk:
+  -- 50,000 records per ledger (years of use for two people) and 300 MB in total.
+  if (select count(*) from public.records where ledger_id = p_ledger) + jsonb_array_length(p_rows) > 50000 then
+    raise exception 'this shared ledger is full';
+  end if;
+  if pg_total_relation_size('public.records') > 300 * 1024 * 1024 then
+    raise exception 'the sync database is full';
   end if;
 
   insert into public.records as t (ledger_id, id, updated_at, deleted, iv, data, seq)

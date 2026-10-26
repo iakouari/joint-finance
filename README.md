@@ -1,85 +1,57 @@
-# Pocket Ledger
+# Joint Finance Tracker
 
-A personal finance tracker that is one HTML file: `index.html`. No install, no server, no account.
+Tracks joint finances for two people: weekly everyday spending (food shopping, petrol and so on), monthly joint bills, what each person paid into the joint account, and a shared food-voucher card. It is a single HTML file, `index.html`, that installs on an iPhone home screen. There is no account, and your data stays on your phones.
 
-**On a computer:** download `index.html` and open it in your browser (double-click it). To try the importer,
-use the fake Monzo export in `samples/monzo-sample.csv`.
+(This app used to be called Pocket Ledger. Data from Pocket Ledger is converted automatically the first time you open the new version, and the old copy is kept as a safety net.)
 
-**On a phone:** open **https://iakouari.github.io/pocket-ledger/** and add it to your home screen. In Safari, tap Share → Add to Home Screen. In Chrome on Android, tap ⋮ → Add to Home screen.
-Always open it from the home-screen icon. On iPhone, data for websites you only visit in a Safari tab can be deleted after 7 days without a visit, but home-screen apps are exempt.
-Your phone and your computer each keep their own separate data. Move it between them with *Download backup* and *Restore from backup*.
+## Using it
 
-> The web address serves only the empty app (the code you can read in this repo). Your transactions are saved in your phone's browser and are never sent to GitHub or anywhere else. The page's security policy blocks every outgoing network request, including requests to the site that hosts it.
+**On a phone:** open **https://iakouari.github.io/joint-finance/** in Safari, then tap Share → Add to Home Screen. Always open it from the icon: on iPhone, data for websites you only visit in a Safari tab can be deleted after 7 days without a visit, but home-screen apps are exempt.
+
+**On a computer:** download `index.html` and open it in your browser.
 
 ## Features
 
-- Designed to feel like an iPhone app, following Apple's Human Interface Guidelines: a floating tab bar, large titles, inset grouped lists, add/edit sheets, Dark Mode, large text sizes, and 44-point tap targets.
-- Add, edit and delete transactions (amount, date, category, note).
-- Your own categories. Each one has a type (Spending, Income or Savings), and the type decides how its transactions are counted.
-- A dashboard for any month: money in, money out, net, and how much you saved compared with a monthly goal.
-- Charts: spending by category, and money in and out for the last six months. Hover over a bar, or tab to it, to see the numbers.
-- CSV import. A Monzo export is recognised and its columns are matched automatically. For other banks you pick which column is which. Re-importing the same file never creates duplicates.
-- Backup to a JSON file, restore from a backup, and erase everything.
+- **Joint or one person, per expense.** Each expense is split **50/50** by default. Choose **Custom** to type one person's part (the other fills itself in, so the two always add up), or give the whole amount to one person. For example, £80 → Isak £40 · Lucas £40.
+- **Week and Month views.** The week view shows everyday spending (Monday to Sunday) and each person's share. The month view adds bills, and compares what each of you **paid into the joint account** with your **share of spending**: "Short £120" or "Over £45".
+- **Bills.** Monthly bills (rent, energy…) with a due day and a split. Tap **Pay** to record a bill as paid; the amount can be changed if it varies. Overdue bills are flagged.
+- **Vouchers.** One shared voucher card. Record vouchers you buy (e.g. £100 for £95) to track the balance and the money saved. **Log Shop** records a shop in a few taps: type the receipt total and the voucher pays what it can, with the rest recorded as **overspend** from the joint account. Or type just the overspend ("£8 over") and the app assumes the voucher was used up.
+- **Sharing between both phones.** End-to-end encrypted (see below). Entries show who added them.
+- **iPhone design** that follows Apple's Human Interface Guidelines: floating glass tab bar, large titles, inset grouped lists, sheets, Dark Mode, large text sizes, and 44-point tap targets.
+- **Backup, restore and erase**, from Settings.
 
 ## Where your data lives, and who can see it
 
 | Question | Answer |
 |---|---|
-| Where is it stored? | In your browser's **localStorage**, a small key-value store (roughly 5 MB) that the browser saves on your computer's disk. The data sits under one key, `pocketLedger.v1`, as JSON text. |
-| Does it go to a server? | **Not unless you turn on Sharing**, and then only encrypted (see below). Otherwise there is no server. The page also has a *Content Security Policy*, a `<meta>` tag at the top of the file that tells the browser to block every network request the page makes. So the browser itself enforces "nothing leaves the device", not just my promise. You can check this: the test that tried `fetch("https://example.com")` was blocked. |
-| Who can see it? | Anyone who can use your browser profile on your computer, and browser extensions you've allowed to read pages. The data is **not encrypted**, so protect it the same way you protect your computer: with a login password and disk encryption (FileVault or BitLocker). |
-| What about the CSV? | The browser reads the file locally (`file.text()`). Nothing is uploaded. The app keeps only the fields it needs: date, amount, category, name, notes and the Monzo transaction ID. |
-| How could I lose it? | Clearing "site data" or "cookies and site data", using a private window, or switching browser or computer. Each browser keeps its own separate storage. Use **Your data → Download backup** now and then. |
-| Opening the file locally vs hosting it | Storage is tied to the page's *origin* (where it was loaded from). If you open the file from disk (`file://`) and later from a website, they have separate storage. In Chrome, every local `file://` page shares one storage area, so another local HTML file could read this data. Only open local files you trust. |
+| Where is it stored? | In each phone's browser storage (**localStorage**), under the key `jointFinance.v2`, as JSON text. |
+| Does it go to a server? | **Only if you turn on Sharing, and then only encrypted.** Otherwise there is no server. The page's *Content Security Policy* (a `<meta>` tag at the top of the file) makes the browser block every network request except to the one sync server. |
+| Who can see it? | Anyone who can use the phone's browser, and browser extensions you've allowed to read pages. It isn't encrypted on the phone, so keep a passcode on. |
+| How could I lose it? | Clearing Safari's website data, removing the home-screen icon, or switching phone. Download a backup now and then. |
 
-## Sharing a ledger with a partner (end-to-end encrypted)
+## Sharing between two phones (end-to-end encrypted)
 
-Two phones can share one ledger. Both see the same transactions, and either can add, edit or delete them.
-
-- **Start sharing:** Settings → Start Sharing. The phone creates an **invite code** (`pl-…`) made of a random ledger ID and a random 128-bit secret. Send it privately, for example in Messages.
-- **Join:** on the other phone, Settings → Join a Shared Ledger, then paste the code. That phone's own data is replaced by the shared ledger.
-- **What leaves the phone:** each transaction, category and setting is encrypted on the phone with AES-256-GCM, using a key derived from the secret (HKDF). Only that scrambled text goes to the sync server (Supabase). The secret never leaves your phones.
+- **Start sharing** in Settings on one phone. You get an **invite code** (`jf-…`) made of a random ledger ID and a random 128-bit secret. Send it privately, for example in Messages.
+- **Join** on the other phone, then paste the code. That phone's own data is replaced by the shared tracker.
+- **What leaves the phone:** every entry, bill, voucher, category and setting is encrypted on the phone with AES-256-GCM, using a key derived from the secret (HKDF), before it is sent. The secret never leaves your phones.
 - **What the server can see:** the random ledger ID, random record IDs, when records changed, and that something was deleted. It can't see amounts, dates, notes, names or categories.
-- **Conflicts:** if both of you change the same transaction, the most recent change wins on both phones.
-- **Anyone with the invite code** can read and change the shared ledger, so treat it like a password. Use "Stop Sharing on This Phone" to disconnect a phone; its data stays on that phone.
-- Your name shows on the transactions you add ("· Lucas"), so you can tell who added what.
+- **Conflicts:** if you both change the same entry, the most recent change wins on both phones.
+- **Anyone with the invite code** can read and change the shared tracker, so treat it like a password.
 
-**Server setup (one time):** create a free Supabase project and run [`sync/supabase-setup.sql`](sync/supabase-setup.sql) in its SQL Editor. The app's address and public key then go into `SYNC_URL` / `SYNC_API_KEY` and the `connect-src` rule at the top of `index.html`. The table can't be read directly: the only way in is two functions, and both need a ledger ID.
+**Server setup (one time):** create a free Supabase project and run [`sync/supabase-setup.sql`](sync/supabase-setup.sql) in its SQL Editor. Then the project's address and public key go into `SYNC_URL` / `SYNC_API_KEY` and the `connect-src` rule at the top of `index.html`. The table can't be read directly: the only way in is two functions, and both need a ledger ID.
 
 ## Key decisions, in plain language
 
-1. **One file, no libraries.** The charts are drawn by hand as SVG instead of using a charting library from the internet. That keeps the app working offline. It also means no outside code runs alongside your bank data, and the strict "block all network" policy can stay switched on.
+1. **One file, no libraries.** The charts are drawn by hand as SVG. No outside code runs alongside your money data, and the strict network policy can stay switched on.
+2. **Money is stored in pence as whole numbers.** In JavaScript, `0.1 + 0.2` gives `0.30000000000000004`. Whole pence (`1250` for £12.50) add up exactly.
+3. **Splits never lose a penny.** A share is worked out for person 1, and person 2 gets `amount − share`, so £10.01 becomes £5.01 + £5.00, never £5.00 + £5.00.
+4. **Dates are stored as text, `"2026-10-26"`.** That avoids time-zone bugs where a late-night entry moves into the next day.
+5. **One source of truth.** An entry stores its category, and the category says whether it's everyday, a bill or money paid in. A bill counts as "paid" because an expense is linked to it, not because of a separate tick that could disagree. The voucher balance is *worked out* from vouchers bought minus voucher spending, rather than stored.
+6. **Calculations are separate from the display code.** Functions like `shares()`, `periodTotals()` and `voucherSummary()` take data and return numbers without touching the page, which makes them easy to test.
+7. **User text is escaped before display**, so a note like `<img onerror=...>` shows as text instead of running as code (an XSS bug).
+8. **Data upgrades are careful.** The data carries a version number. Pocket Ledger (version 1) data is converted, and the original is left in place. Data that can't be read is copied aside, never overwritten.
 
-2. **Money is stored in pence as whole numbers.** Computers store decimals in binary, and binary can't hold most decimals exactly: in JavaScript, `0.1 + 0.2` gives `0.30000000000000004`. Adding thousands of transactions as pounds would slowly build up errors like that. Whole pence (`1250` for £12.50) add up exactly. The app converts to pounds only for display.
+## Tests
 
-3. **Dates are stored as text, `"2026-10-26"`.** A full date-and-time object brings in time zones. A transaction late at night on the 31st can show up in the next month once it's converted to UTC. Plain date text sorts correctly and doesn't change between time zones.
-
-4. **The category decides the type.** A transaction doesn't store whether it is income or spending. It stores its category, and the category has the type. Each fact is stored once (a "single source of truth"), so the two can never disagree. If you change a category's type, all its transactions follow.
-
-5. **Calculations are kept separate from the display code.** Functions like `monthTotals()` take data and return numbers without touching the page. Code like that is easier to reason about and to test.
-
-6. **User text is escaped before display.** Notes come from you, or from a CSV file. If a note contained `<img onerror=...>` and the app put it into the page as raw HTML, the browser would run it. This kind of bug is called cross-site scripting (XSS). The `esc()` function and the use of `textContent` turn such text into harmless characters. The test adds exactly that note and checks that it shows up as plain text.
-
-7. **Saving is careful.** The data carries a version number, so a future version of the app can upgrade old data. If saved data can't be read, the app copies it to a separate key instead of overwriting it. If storage is blocked or full, a visible warning appears instead of the app silently losing your entries.
-
-8. **Imports are previewed and checked for duplicates.** Every Monzo row has a unique Transaction ID. The app remembers each imported ID, so importing an overlapping export only adds the new rows. You see a summary (counts, date range, any new categories) before anything is saved.
-
-## How Monzo rows are interpreted
-
-Monzo amounts are from the account's point of view (`-12.50` means money left the account):
-
-| Monzo row | Becomes |
-|---|---|
-| Type `Pot transfer`, money into a pot | **Savings** (taking money out of a pot counts as negative savings) |
-| Positive amount in category `income`, `transfers` or blank | **Income** ("Other income") |
-| Positive amount in a spending category | A **refund**, which reduces spending in that category |
-| Negative amount | **Spending** in a category named after Monzo's (`eating_out` → "Eating out"). The category is created if it doesn't exist. |
-| £0.00 (card checks) | Skipped |
-
-Monzo files rent under **Bills**. Add a "Rent" category and recategorise the transaction if you want it shown separately.
-
-## Ideas for next steps
-
-- Split `index.html` into separate HTML, CSS and JS files, and add automated tests for the calculation functions.
-- Optional encryption of the stored data with a passphrase, using the browser's built-in Web Crypto API.
-- Budgets per category.
+- `node tests/app.test.js` drives the app on a simulated iPhone: splits, money paid in, bills, vouchers, Log Shop, editing, renaming, upgrading old data, layout at very large text sizes, and tap-target sizes.
+- `node tests/sync.test.js` runs two simulated phones sharing one tracker through a stand-in for Supabase backed by a real Postgres. It checks adds, edits, deletes, conflicts, an outage, a wrong invite code, and that the server never holds readable data. It needs Postgres with `sync/supabase-setup.sql` applied, and `PGHOST` / `PGPORT` / `PGUSER` set.

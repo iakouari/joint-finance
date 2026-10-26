@@ -1,0 +1,12 @@
+# Build and test leftovers
+node_modules/
+_site/
+test-results/
+
+# Never commit real money data or secrets
+*backup*.json
+.env*
+
+# OS junk
+.DS_Store
+Thumbs.db

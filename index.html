@@ -17,9 +17,10 @@
   somewhere, the browser itself would refuse.
   The one exception is connect-src: the shared-ledger sync server. Only
   encrypted data is ever sent there (see section 8 of the script).
+  worker-src allows the app's own offline helper, sw.js.
 -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; manifest-src 'self'; connect-src https://YOUR-PROJECT.supabase.co; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; connect-src https://YOUR-PROJECT.supabase.co; form-action 'none'; base-uri 'none'">
 <title>Joint Finance Tracker</title>
 <!-- Home-screen app settings: name, icon, and no browser bars when opened from the icon. -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -2211,6 +2212,12 @@ startSync();
 renderAll();
 showTab("home");
 startSync();
+
+// Offline support: sw.js keeps a copy of the app's files so it opens without
+// internet. (Not available when the file is opened straight from disk.)
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
 </script>
 </body>
 </html>
