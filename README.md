@@ -26,11 +26,25 @@ Your phone and your computer each keep their own separate data. Move it between 
 | Question | Answer |
 |---|---|
 | Where is it stored? | In your browser's **localStorage**, a small key-value store (roughly 5 MB) that the browser saves on your computer's disk. The data sits under one key, `pocketLedger.v1`, as JSON text. |
-| Does it go to a server? | **No.** There is no server. The page also has a *Content Security Policy*, a `<meta>` tag at the top of the file that tells the browser to block every network request the page makes. So the browser itself enforces "nothing leaves the device", not just my promise. You can check this: the test that tried `fetch("https://example.com")` was blocked. |
+| Does it go to a server? | **Not unless you turn on Sharing**, and then only encrypted (see below). Otherwise there is no server. The page also has a *Content Security Policy*, a `<meta>` tag at the top of the file that tells the browser to block every network request the page makes. So the browser itself enforces "nothing leaves the device", not just my promise. You can check this: the test that tried `fetch("https://example.com")` was blocked. |
 | Who can see it? | Anyone who can use your browser profile on your computer, and browser extensions you've allowed to read pages. The data is **not encrypted**, so protect it the same way you protect your computer: with a login password and disk encryption (FileVault or BitLocker). |
 | What about the CSV? | The browser reads the file locally (`file.text()`). Nothing is uploaded. The app keeps only the fields it needs: date, amount, category, name, notes and the Monzo transaction ID. |
 | How could I lose it? | Clearing "site data" or "cookies and site data", using a private window, or switching browser or computer. Each browser keeps its own separate storage. Use **Your data → Download backup** now and then. |
 | Opening the file locally vs hosting it | Storage is tied to the page's *origin* (where it was loaded from). If you open the file from disk (`file://`) and later from a website, they have separate storage. In Chrome, every local `file://` page shares one storage area, so another local HTML file could read this data. Only open local files you trust. |
+
+## Sharing a ledger with a partner (end-to-end encrypted)
+
+Two phones can share one ledger. Both see the same transactions, and either can add, edit or delete them.
+
+- **Start sharing:** Settings → Start Sharing. The phone creates an **invite code** (`pl-…`) made of a random ledger ID and a random 128-bit secret. Send it privately, for example in Messages.
+- **Join:** on the other phone, Settings → Join a Shared Ledger, then paste the code. That phone's own data is replaced by the shared ledger.
+- **What leaves the phone:** each transaction, category and setting is encrypted on the phone with AES-256-GCM, using a key derived from the secret (HKDF). Only that scrambled text goes to the sync server (Supabase). The secret never leaves your phones.
+- **What the server can see:** the random ledger ID, random record IDs, when records changed, and that something was deleted. It can't see amounts, dates, notes, names or categories.
+- **Conflicts:** if both of you change the same transaction, the most recent change wins on both phones.
+- **Anyone with the invite code** can read and change the shared ledger, so treat it like a password. Use "Stop Sharing on This Phone" to disconnect a phone; its data stays on that phone.
+- Your name shows on the transactions you add ("· Lucas"), so you can tell who added what.
+
+**Server setup (one time):** create a free Supabase project and run [`sync/supabase-setup.sql`](sync/supabase-setup.sql) in its SQL Editor. The app's address and public key then go into `SYNC_URL` / `SYNC_API_KEY` and the `connect-src` rule at the top of `index.html`. The table can't be read directly: the only way in is two functions, and both need a ledger ID.
 
 ## Key decisions, in plain language
 

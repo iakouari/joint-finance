@@ -15,9 +15,11 @@
   (used to install it on a phone's home screen). fetch() and every other site stay
   blocked, so even if a bug (or a malicious bank CSV) tried to send your data
   somewhere, the browser itself would refuse.
+  The one exception is connect-src: the shared-ledger sync server. Only
+  encrypted data is ever sent there (see section 8 of the script).
 -->
 <meta http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; manifest-src 'self'; form-action 'none'; base-uri 'none'">
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; manifest-src 'self'; connect-src https://YOUR-PROJECT.supabase.co; form-action 'none'; base-uri 'none'">
 <title>Pocket Ledger</title>
 <!-- Home-screen app settings: name, icon, and no browser bars when opened from the icon. -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -401,10 +403,14 @@
     </div>
     <p class="section-footer" id="storageStats"></p>
 
+    <h2 class="section-header">Sharing</h2>
+    <div class="group" id="sharingBox"></div>
+    <p class="section-footer" id="sharingFooter"></p>
+
     <h2 class="section-header">Your data</h2>
     <div class="group">
-      <div class="row"><div class="grow"><div class="title">Stays on this device</div><div class="sub">Saved in this browser's storage. There is no server and no account.</div></div></div>
-      <div class="row"><div class="grow"><div class="title">Never sent anywhere</div><div class="sub">A security policy makes the browser block every network request from this app.</div></div></div>
+      <div class="row"><div class="grow"><div class="title">Stays on this device</div><div class="sub" id="privacyStay">Saved in this browser's storage. There is no server and no account.</div></div></div>
+      <div class="row"><div class="grow"><div class="title" id="privacySentTitle">Never sent anywhere</div><div class="sub" id="privacySent">A security policy makes the browser block every network request from this app.</div></div></div>
       <div class="row"><div class="grow"><div class="title">Who can see it</div><div class="sub">Anyone who can unlock this device and use this browser. It isn't encrypted, so keep a passcode on.</div></div></div>
       <div class="row"><div class="grow"><div class="title">How it could be lost</div><div class="sub">Clearing Safari's website data, or removing the home-screen icon. Download a backup now and then.</div></div></div>
     </div>
@@ -467,6 +473,9 @@ function defaultState() {
     // amount is stored in PENCE as a whole number (see README: why not decimals?)
     transactions: [],   // { id, date: "YYYY-MM-DD", amount, categoryId, note, importId? }
     settings: { savingsGoal: 30000 },
+    // Deleted records, as "tx:<id>" -> time of deletion, so a shared ledger
+    // can tell other phones that something was removed (a "tombstone").
+    deleted: {},
   };
 }
 
@@ -486,6 +495,7 @@ function loadState() {
   try {
     const data = JSON.parse(raw);
     if (data.version !== SCHEMA_VERSION || !Array.isArray(data.transactions)) throw new Error("Unknown format");
+    data.deleted = data.deleted || {};
     return data;
   } catch (e) {
     // Never silently overwrite data we can't read — park it under a separate key.
@@ -495,14 +505,23 @@ function loadState() {
   }
 }
 
-function save() {
+function save(fromSync) {
   if (!storageOk) return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) {
     showStorageWarning("Saving failed (" + e.name + "). Your browser's storage may be full. Download a backup from 'Your data'.");
   }
+  if (!fromSync && typeof scheduleSync === "function") scheduleSync();
 }
+
+// Every change records WHEN it happened, so two phones sharing a ledger can
+// agree on which version is newest ("last write wins").
+function touch(record) {
+  record.updatedAt = Math.max(Date.now(), (record.updatedAt || 0) + 1);
+  return record;
+}
+function tombstone(kind, id) { state.deleted[kind + ":" + id] = Date.now(); }
 
 function showStorageWarning(msg) {
   const box = document.getElementById("storageWarning");
@@ -514,7 +533,7 @@ let state = loadState();
 
 // If you have the app open in two tabs, keep them in sync.
 window.addEventListener("storage", (e) => {
-  if (e.key === STORAGE_KEY && e.newValue) { state = JSON.parse(e.newValue); renderAll(); }
+  if (e.key === STORAGE_KEY && e.newValue) { state = JSON.parse(e.newValue); state.deleted = state.deleted || {}; renderAll(); }
 });
 
 /* =========================================================================
@@ -614,6 +633,7 @@ function renderAll() {
   renderActivity();
   renderCategories();
   renderSettings();
+  renderSharing();
 }
 
 function renderSummary() {
@@ -693,7 +713,7 @@ function renderActivity() {
         return `<button class="row" data-edit="${esc(tx.id)}" aria-label="${esc(label)}. Edit">
           <span class="badge ${kind}" aria-hidden="true">${ICONS[kind]}</span>
           <span class="grow"><div class="title">${esc(tx.note || (cat ? cat.name : "—"))}</div>
-            <div class="sub">${esc(cat ? cat.name : "Unknown")}${refund ? " · Refund" : kind === "savings" ? (tx.amount < 0 ? " · Withdrawn" : " · Saved") : ""}</div></span>
+            <div class="sub">${esc(cat ? cat.name : "Unknown")}${refund ? " · Refund" : kind === "savings" ? (tx.amount < 0 ? " · Withdrawn" : " · Saved") : ""}${addedByOther(tx) ? " · " + esc(tx.by) : ""}</div></span>
           <span class="amount money ${kind === "income" || refund ? "pos" : ""}">${sign}${esc(fmt(Math.abs(tx.amount)))}</span>
           ${ICONS.chevron}
         </button>`;
@@ -740,6 +760,7 @@ let sheetDirty = false;
 function openSheet(html, onReady) {
   sheetOpener = document.activeElement;
   sheet.innerHTML = html;
+  sheet.oninput = null;
   sheetDirty = false;
   scrim.classList.remove("hidden");
   document.getElementById("app").inert = true;          // screen readers and Tab stay inside the sheet
@@ -828,7 +849,7 @@ function openTransactionSheet(txId) {
       <div class="field-row"><label for="txDate">Date</label><input id="txDate" type="date" value="${esc(date)}" required></div>
       <div class="field-row"><label for="txNote">Note</label><input id="txNote" maxlength="200" placeholder="Optional" autocomplete="off" value="${tx ? esc(tx.note) : ""}"></div>
     </div>
-    <p class="section-footer">For a refund, choose Spending and type a minus sign, for example −12.99.</p>
+    <p class="section-footer">For a refund, choose Spending and type a minus sign, for example −12.99.${tx && addedByOther(tx) ? ` Added by ${esc(tx.by)}.` : ""}</p>
     ${tx ? `<div class="group" style="margin-top:24px"><button class="row destructive" data-sheet="delete">Delete Transaction</button></div>` : ""}
   `, () => {
     const amountEl = document.getElementById("txAmount");
@@ -854,6 +875,7 @@ function openTransactionSheet(txId) {
       if (act.dataset.sheet === "delete") {
         if (!confirm("Delete this transaction?")) return;
         state.transactions = state.transactions.filter((t) => t.id !== tx.id);
+        tombstone("tx", tx.id);
         save(); closeSheet(true); renderAll();
         return;
       }
@@ -865,8 +887,8 @@ function openTransactionSheet(txId) {
         categoryId: document.getElementById("txCategory").value,
         note: document.getElementById("txNote").value.trim(),
       };
-      if (tx) Object.assign(tx, data);
-      else state.transactions.push({ id: newId(), ...data });
+      if (tx) touch(Object.assign(tx, data));
+      else state.transactions.push(touch({ id: newId(), ...data, ...(sync ? { by: sync.name } : {}) }));
       save();
       currentMonth = monthOf(dateVal);
       closeSheet(true);
@@ -915,8 +937,9 @@ function openCategorySheet(catId) {
         if (!siblings.length) { alert("Keep at least one category of each type."); return; }
         const target = siblings.find((c) => /^(general|other)/i.test(c.name)) || siblings[0];
         if (!confirm(used ? `Delete "${cat.name}"? Its ${used} transactions will move to "${target.name}".` : `Delete "${cat.name}"?`)) return;
-        for (const t of state.transactions) if (t.categoryId === cat.id) t.categoryId = target.id;
+        for (const t of state.transactions) if (t.categoryId === cat.id) { t.categoryId = target.id; touch(t); }
         state.categories = state.categories.filter((c) => c.id !== cat.id);
+        tombstone("cat", cat.id);
         save(); closeSheet(true); renderAll();
         return;
       }
@@ -926,9 +949,9 @@ function openCategorySheet(catId) {
       if (clash) { alert("That category already exists."); return; }
       if (cat) {
         if (cat.kind !== kind && lastOfKind(cat.kind)) { alert("Keep at least one category of each type."); return; }
-        cat.name = name; cat.kind = kind;
+        cat.name = name; cat.kind = kind; touch(cat);
       } else {
-        state.categories.push({ id: newId(), name, kind });
+        state.categories.push(touch({ id: newId(), name, kind }));
       }
       save(); closeSheet(true); renderAll();
     };
@@ -1236,8 +1259,8 @@ function prepareImport(items, headline) {
 
 function commitImport() {
   if (!pendingImport) return;
-  state.categories.push(...pendingImport.newCats.values());
-  state.transactions.push(...pendingImport.add);
+  state.categories.push(...[...pendingImport.newCats.values()].map(touch));
+  state.transactions.push(...pendingImport.add.map((t) => touch(sync ? { ...t, by: sync.name } : t)));
   const latest = pendingImport.add.map((t) => t.date).sort().pop();
   const n = pendingImport.add.length;
   pendingImport = null;
@@ -1297,6 +1320,7 @@ function saveGoal() {
   const pence = v === "" ? 0 : parsePence(v);
   if (pence == null || pence < 0) { alert("Please enter an amount, like 300"); goalInput.value = ""; return; }
   state.settings.savingsGoal = pence;
+  touch(state.settings);
   save(); renderAll();
 }
 goalInput.addEventListener("change", saveGoal);
@@ -1329,8 +1353,14 @@ document.getElementById("restoreFile").addEventListener("change", async (e) => {
   try {
     const data = JSON.parse(await file.text());
     if (data.version !== SCHEMA_VERSION || !Array.isArray(data.transactions) || !Array.isArray(data.categories)) throw new Error();
-    if (!confirm(`Replace everything currently stored with this backup (${data.transactions.length} transactions)?`)) return;
+    const warn = sync ? " This also replaces the shared ledger for everyone you share with." : "";
+    if (!confirm(`Replace everything currently stored with this backup (${data.transactions.length} transactions)?${warn}`)) return;
+    const before = localRecords();
+    data.deleted = data.deleted || {};
     state = data;
+    for (const r of [...state.transactions, ...state.categories, state.settings]) touch(r);
+    const after = localRecords();
+    for (const id of before.keys()) if (!after.has(id)) state.deleted[id] = Date.now();
     save(); renderAll();
   } catch (_) {
     alert("That file isn't a Pocket Ledger backup.");
@@ -1338,14 +1368,411 @@ document.getElementById("restoreFile").addEventListener("change", async (e) => {
 });
 
 document.getElementById("wipeBtn").onclick = () => {
-  if (!confirm("Erase all transactions, categories and settings from this device? This can't be undone unless you have a backup.")) return;
+  const extra = sync ? " This also stops sharing on this phone. The shared copy is not deleted for others." : "";
+  if (!confirm("Erase all transactions, categories and settings from this device? This can't be undone unless you have a backup." + extra)) return;
+  if (sync) leaveLedger();
   try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
   state = defaultState();
   save(); renderAll();
 };
 
+/* =========================================================================
+   8. SHARED LEDGER SYNC (end-to-end encrypted)
+
+   How it works, in plain words:
+   - "Start sharing" makes two random codes: a LEDGER ID (which shared ledger)
+     and a SECRET (the key). Together they form the invite code you send your
+     partner. The secret never goes to the server.
+   - Every transaction, category and setting is locked (encrypted with
+     AES-GCM, built into the browser) using a key made from the secret, and
+     only the locked version is sent to the sync server.
+   - Each phone asks the server "what changed since last time?", unlocks the
+     changes, and keeps whichever version of each record is newest.
+   The server therefore stores scrambled text it cannot read. It can see: the
+   ledger ID, random record IDs, when things changed, and that something was
+   deleted — not amounts, names, notes or dates of transactions.
+   ========================================================================= */
+const SYNC_URL = "https://YOUR-PROJECT.supabase.co";   // set when the server is created
+const SYNC_API_KEY = "YOUR-PUBLISHABLE-KEY";           // public by design: it only allows calling pl_pull / pl_push
+const SYNC_STORE = "pocketLedger.sync.v1";
+const syncConfigured = !SYNC_URL.includes("YOUR-PROJECT");
+
+// What this phone remembers about sharing (kept apart from the ledger data):
+// { ledgerId, secret, name, lastSeq, synced: { recordId: updatedAt }, lastSyncAt }
+let sync = null;
+let syncKey = null;          // the unlocked CryptoKey, kept only in memory
+let syncStatus = "";
+let syncTimer = null;
+
+try { sync = JSON.parse(localStorage.getItem(SYNC_STORE) || "null"); } catch (_) { sync = null; }
+function saveSyncInfo() {
+  try { sync ? localStorage.setItem(SYNC_STORE, JSON.stringify(sync)) : localStorage.removeItem(SYNC_STORE); } catch (_) {}
+}
+
+function addedByOther(tx) { return Boolean(sync && tx.by && tx.by !== sync.name); }
+
+// ---- Codes ----
+const B32 = "abcdefghijklmnopqrstuvwxyz234567";
+function randomCode() {   // 16 random bytes = 128 bits, written as 26 letters/digits
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  let bits = 0, value = 0, out = "";
+  for (const b of bytes) {
+    value = (value << 8) | b; bits += 8;
+    while (bits >= 5) { out += B32[(value >>> (bits - 5)) & 31]; bits -= 5; }
+  }
+  if (bits > 0) out += B32[(value << (5 - bits)) & 31];
+  return out;
+}
+const inviteCode = () => `pl-${sync.ledgerId}-${sync.secret}`;
+function parseInvite(text) {
+  const m = String(text).toLowerCase().replace(/\s+/g, "").match(/^pl-([a-z2-7]{26})-([a-z2-7]{26})$/);
+  return m ? { ledgerId: m[1], secret: m[2] } : null;
+}
+
+// ---- Encryption ----
+const enc = new TextEncoder(), dec = new TextDecoder();
+const toB64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const fromB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+// Turn the secret into an AES key (HKDF). The key is marked non-extractable:
+// even code running in this page can use it but never read it out.
+async function deriveKey(ledgerId, secret) {
+  const base = await crypto.subtle.importKey("raw", enc.encode(secret), "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "HKDF", hash: "SHA-256", salt: enc.encode(ledgerId), info: enc.encode("pocket-ledger sync v1") },
+    base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+// The record ID is mixed in as "additional data", so the server can't swap
+// one record's locked contents for another's without it being detected.
+async function encryptRecord(key, ledgerId, id, value) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: enc.encode(ledgerId + "|" + id) },
+    key, enc.encode(JSON.stringify(value)));
+  return { iv: toB64(iv), data: toB64(data) };
+}
+async function decryptRecord(key, ledgerId, row) {
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(row.iv), additionalData: enc.encode(ledgerId + "|" + row.id) },
+    key, fromB64(row.data));
+  return JSON.parse(dec.decode(plain));
+}
+
+// ---- Talking to the server ----
+async function rpc(fn, body) {
+  const headers = { "Content-Type": "application/json", apikey: SYNC_API_KEY };
+  if (SYNC_API_KEY.startsWith("eyJ")) headers.Authorization = "Bearer " + SYNC_API_KEY;   // older-style Supabase keys
+  const res = await fetch(`${SYNC_URL}/rest/v1/rpc/${fn}`, { method: "POST", headers, body: JSON.stringify(body) });
+  if (!res.ok) {
+    let msg = "";
+    try { msg = (await res.json()).message || ""; } catch (_) {}
+    const err = new Error(msg || "The sync server answered with error " + res.status);
+    err.fromServer = true;
+    throw err;
+  }
+  return res.json();
+}
+async function pullAll(ledgerId, since) {
+  const rows = [];
+  for (;;) {
+    const page = await rpc("pl_pull", { p_ledger: ledgerId, p_since: since });
+    rows.push(...page);
+    if (page.length < 2000) return rows;
+    since = page[page.length - 1].seq;
+  }
+}
+
+// ---- Records: the ledger cut into pieces that sync independently ----
+function localRecords() {
+  const m = new Map();
+  for (const c of state.categories) m.set("cat:" + c.id, { updatedAt: c.updatedAt || 1, value: c });
+  for (const t of state.transactions) m.set("tx:" + t.id, { updatedAt: t.updatedAt || 1, value: t });
+  m.set("settings", { updatedAt: state.settings.updatedAt || 1, value: state.settings });
+  for (const [id, at] of Object.entries(state.deleted || {})) {
+    if (!m.has(id) || m.get(id).updatedAt < at) m.set(id, { updatedAt: at, deleted: true });
+  }
+  return m;
+}
+
+// Only accept records that look right, so a damaged record can't break the app.
+function validRecord(kind, v) {
+  if (!v || typeof v !== "object") return false;
+  if (kind === "tx") return typeof v.id === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v.date) && Number.isInteger(v.amount)
+    && typeof v.categoryId === "string" && typeof (v.note ?? "") === "string";
+  if (kind === "cat") return typeof v.id === "string" && typeof v.name === "string" && ["expense", "income", "savings"].includes(v.kind);
+  if (kind === "settings") return Number.isInteger(v.savingsGoal ?? 0);
+  return false;
+}
+
+function applyRemote(target, id, updatedAt, deleted, value) {
+  const sep = id.indexOf(":");
+  const kind = id === "settings" ? "settings" : id.slice(0, sep);
+  const rid = id.slice(sep + 1);
+  const list = kind === "tx" ? target.transactions : kind === "cat" ? target.categories : null;
+  if (deleted) {
+    if (list) { const i = list.findIndex((r) => r.id === rid); if (i >= 0) list.splice(i, 1); }
+    target.deleted[id] = updatedAt;
+    return true;
+  }
+  if (!validRecord(kind, value)) return false;
+  value.updatedAt = updatedAt;
+  if (kind === "settings") { target.settings = value; return true; }
+  value.id = rid;
+  const i = list.findIndex((r) => r.id === rid);
+  if (i >= 0) list[i] = value; else list.push(value);
+  delete target.deleted[id];
+  return true;
+}
+
+// ---- One sync round: fetch others' changes, then send ours ----
+let syncing = false, syncAgain = false;
+async function syncNow(full) {
+  if (!sync || !syncKey || !syncConfigured) return;
+  if (syncing) { syncAgain = true; return; }
+  syncing = true;
+  setSyncStatus("Syncing…");
+  try {
+    const rows = await pullAll(sync.ledgerId, full ? 0 : sync.lastSeq);
+    const local = localRecords();
+    let changed = false, unreadable = 0;
+    for (const r of rows) {
+      sync.lastSeq = Math.max(sync.lastSeq, r.seq);
+      const mine = local.get(r.id);
+      if (!mine || mine.updatedAt < r.updated_at) {
+        let value = null;
+        if (!r.deleted) {
+          try { value = await decryptRecord(syncKey, sync.ledgerId, r); } catch (_) { unreadable++; continue; }
+        }
+        if (applyRemote(state, r.id, r.updated_at, r.deleted, value)) changed = true; else { unreadable++; continue; }
+      }
+      sync.synced[r.id] = Math.max(sync.synced[r.id] || 0, r.updated_at);
+    }
+
+    const outgoing = [...localRecords()].filter(([id, rec]) => rec.updatedAt > (sync.synced[id] || 0));
+    for (let i = 0; i < outgoing.length; i += 200) {
+      const chunk = outgoing.slice(i, i + 200);
+      const payload = await Promise.all(chunk.map(async ([id, rec]) => rec.deleted
+        ? { id, updated_at: rec.updatedAt, deleted: true }
+        : { id, updated_at: rec.updatedAt, ...(await encryptRecord(syncKey, sync.ledgerId, id, rec.value)) }));
+      await rpc("pl_push", { p_ledger: sync.ledgerId, p_rows: payload });
+      for (const [id, rec] of chunk) sync.synced[id] = rec.updatedAt;
+    }
+
+    sync.lastSyncAt = Date.now();
+    saveSyncInfo();
+    if (changed) { save(true); renderAll(); }
+    setSyncStatus(unreadable ? `${unreadable} shared item${unreadable === 1 ? "" : "s"} couldn't be unlocked. Check that both phones used the same invite code.` : "");
+  } catch (e) {
+    setSyncStatus(e.fromServer ? "Sync problem: " + e.message : "Offline. Changes will sync when you're back online.");
+  } finally {
+    syncing = false;
+    if (syncAgain) { syncAgain = false; syncNow(); }
+  }
+}
+
+// After any local change, sync shortly afterwards (batching quick edits together).
+function scheduleSync() {
+  if (!sync) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => syncNow(), 1500);
+}
+
+async function startSync() {
+  renderSharing();
+  if (!sync || !syncConfigured) return;
+  try { syncKey = await deriveKey(sync.ledgerId, sync.secret); } catch (_) { setSyncStatus("This browser can't do the encryption needed for sharing."); return; }
+  syncNow(true);
+  startTimers();
+}
+
+function leaveLedger() {
+  sync = null; syncKey = null;
+  saveSyncInfo();
+  setSyncStatus("");
+}
+
+// ---- Settings → Sharing ----
+function setSyncStatus(text) { syncStatus = text; renderSharing(); }
+
+function timeAgo(ms) {
+  const s = Math.round((Date.now() - ms) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return Math.round(s / 60) + " min ago";
+  if (s < 86400) return Math.round(s / 3600) + " h ago";
+  return new Date(ms).toLocaleDateString("en-GB");
+}
+
+function renderSharing() {
+  const box = document.getElementById("sharingBox");
+  const foot = document.getElementById("sharingFooter");
+  if (!box) return;
+  const stay = document.getElementById("privacyStay"), sentT = document.getElementById("privacySentTitle"), sent = document.getElementById("privacySent");
+  if (!syncConfigured) {
+    box.innerHTML = `<div class="row"><div class="grow"><div class="title">Not available yet</div><div class="sub">The sync server for this app hasn't been set up.</div></div></div>`;
+    foot.textContent = "";
+    return;
+  }
+  if (!sync) {
+    box.innerHTML = `
+      <button class="row action" data-share="start"><span class="grow">Start Sharing…</span>${ICONS.chevron}</button>
+      <button class="row action" data-share="join"><span class="grow">Join a Shared Ledger…</span>${ICONS.chevron}</button>`;
+    foot.textContent = "Share one ledger with a partner. Both phones see and change the same transactions. Everything is encrypted on your phone before it is sent.";
+    stay.textContent = "Saved in this browser's storage. There is no account.";
+    sentT.textContent = "Never sent anywhere";
+    sent.textContent = "A security policy makes the browser block every network request from this app, except to the sync server, which is only used if you turn on sharing.";
+    return;
+  }
+  const status = syncStatus || (sync.lastSyncAt ? "Synced " + timeAgo(sync.lastSyncAt) : "Not synced yet");
+  box.innerHTML = `
+    <div class="row"><div class="grow"><div class="title">Shared ledger</div><div class="sub" role="status">${esc(status)}</div></div>
+      <button class="icon-btn" data-share="now">Sync Now</button></div>
+    <div class="row"><div class="grow title">Your name</div><span class="trail">${esc(sync.name)}</span></div>
+    <button class="row action" data-share="invite"><span class="grow">Invite Someone…</span>${ICONS.chevron}</button>
+    <button class="row destructive" data-share="leave">Stop Sharing on This Phone</button>`;
+  foot.textContent = "Changes sync within about 20 seconds while the app is open. Your name shows on transactions you add, so you can tell who added what.";
+  stay.textContent = "A full copy lives in this browser's storage on each phone that shares the ledger.";
+  sentT.textContent = "Sent only encrypted";
+  sent.textContent = "Before anything leaves this phone it is locked with your invite code. The sync server (Supabase) stores scrambled text it cannot read; it only sees when things changed.";
+}
+
+document.getElementById("tab-settings").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-share]");
+  if (!b) return;
+  const act = b.dataset.share;
+  if (act === "start") openShareSheet("start");
+  else if (act === "join") openShareSheet("join");
+  else if (act === "invite") openInviteSheet();
+  else if (act === "now") syncNow();
+  else if (act === "leave" && confirm("Stop sharing on this phone? Your data stays on this phone, and the shared copy stays for anyone else using it.")) {
+    leaveLedger(); renderAll();
+  }
+});
+
+function openShareSheet(mode) {
+  const join = mode === "join";
+  openSheet(`
+    ${sheetBar(join ? "Join Shared Ledger" : "Start Sharing", join ? "Join" : "Start")}
+    <div class="group" style="margin-top:12px">
+      <div class="field-row"><label for="shareName">Your name</label><input id="shareName" maxlength="30" placeholder="e.g. Lucas" autocomplete="given-name"></div>
+      ${join ? `<div class="field-row"><label for="shareCode">Invite code</label><input id="shareCode" placeholder="pl-…" autocomplete="off" autocapitalize="off" spellcheck="false"></div>` : ""}
+    </div>
+    <p class="section-footer">${join
+      ? "Paste the invite code your partner sent you. <strong>The data on this phone will be replaced</strong> by the shared ledger, so download a backup first if you want to keep it."
+      : "Your current transactions, categories and goal become the shared ledger. Next you'll get an invite code to send your partner."}</p>
+    <p class="section-footer" id="shareError" role="alert" style="color:var(--neg)"></p>
+  `, () => {
+    const nameEl = document.getElementById("shareName");
+    const codeEl = document.getElementById("shareCode");
+    const confirmBtn = sheet.querySelector('[data-sheet="confirm"]');
+    const validate = () => { confirmBtn.disabled = !nameEl.value.trim() || (join && !parseInvite(codeEl.value)); };
+    sheet.oninput = validate;
+    validate();
+    nameEl.focus();
+    sheet.onclick = async (e) => {
+      const act = e.target.closest("[data-sheet]");
+      if (!act) return;
+      if (act.dataset.sheet === "cancel") return closeSheet(true);
+      const name = nameEl.value.trim();
+      const errEl = document.getElementById("shareError");
+      confirmBtn.disabled = true;
+      errEl.textContent = join ? "Connecting…" : "Setting up…";
+      try {
+        if (join) await joinLedger(name, parseInvite(codeEl.value));
+        else await startLedger(name);
+        closeSheet(true);
+        renderAll();
+        if (!join) openInviteSheet();
+      } catch (err) {
+        errEl.textContent = err.message;
+        confirmBtn.disabled = false;
+      }
+    };
+  });
+}
+
+async function startLedger(name) {
+  const ledgerId = randomCode(), secret = randomCode();
+  syncKey = await deriveKey(ledgerId, secret);
+  sync = { ledgerId, secret, name, lastSeq: 0, synced: {}, lastSyncAt: 0 };
+  for (const t of state.transactions) if (!t.by) { t.by = name; touch(t); }
+  save(true);
+  saveSyncInfo();
+  await syncNow();
+  if (syncStatus.startsWith("Offline") || syncStatus.startsWith("Sync problem")) {
+    const msg = syncStatus;
+    leaveLedger();
+    throw new Error("Couldn't reach the sync server. " + msg);
+  }
+  startTimers();
+}
+
+async function joinLedger(name, code) {
+  const key = await deriveKey(code.ledgerId, code.secret);
+  let rows;
+  try { rows = await pullAll(code.ledgerId, 0); }
+  catch (e) { throw new Error(e.fromServer ? "Sync problem: " + e.message : "Couldn't reach the sync server. Check your internet connection."); }
+  if (!rows.length) throw new Error("No shared ledger was found for this code. Check it was copied in full.");
+  const fresh = { version: SCHEMA_VERSION, categories: [], transactions: [], settings: { savingsGoal: 0 }, deleted: {} };
+  const synced = {};
+  // Deleted-item markers aren't encrypted, so only an unlocked record proves the code is right.
+  let unlocked = 0, lastSeq = 0;
+  for (const r of rows) {
+    lastSeq = Math.max(lastSeq, r.seq);
+    let value = null;
+    if (!r.deleted) { try { value = await decryptRecord(key, code.ledgerId, r); unlocked++; } catch (_) { continue; } }
+    if (applyRemote(fresh, r.id, r.updated_at, r.deleted, value)) synced[r.id] = r.updated_at;
+  }
+  if (!unlocked) throw new Error("This invite code doesn't unlock the shared ledger. Ask your partner to send it again.");
+  state = fresh;
+  syncKey = key;
+  sync = { ...code, name, lastSeq, synced, lastSyncAt: Date.now() };
+  save(true);
+  saveSyncInfo();
+  if (state.transactions.length) currentMonth = monthOf(state.transactions.map((t) => t.date).sort().pop());
+  startTimers();
+}
+
+// Check for your partner's changes every 20 seconds while the app is open,
+// and straight away when the app comes back to the front or back online.
+let timersStarted = false;
+function startTimers() {
+  if (timersStarted) return;
+  timersStarted = true;
+  setInterval(() => { if (document.visibilityState === "visible") syncNow(); }, 20000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") syncNow(); });
+  window.addEventListener("online", () => syncNow());
+}
+
+function openInviteSheet() {
+  const code = inviteCode();
+  openSheet(`
+    ${sheetBar("Invite Someone", "Done")}
+    <p class="section-footer" style="margin:12px 16px">Send this code to your partner privately, for example in Messages. On their phone: Settings → Join a Shared Ledger.</p>
+    <div class="group"><div class="row"><code id="inviteCode" style="font-size:0.95rem;word-break:break-all;user-select:all">${esc(code)}</code></div></div>
+    <div class="actions" style="justify-content:center">
+      <button class="btn primary" data-invite="share">Share Invite…</button>
+      <button class="btn" data-invite="copy">Copy</button>
+    </div>
+    <p class="section-footer" style="margin-top:16px"><strong>Anyone with this code can see and change your shared ledger.</strong> Only send it to people you trust. If you lose it, you can see it again here on any phone that shares the ledger.</p>
+    <p class="section-footer" id="inviteMsg" role="status"></p>
+  `, () => {
+    sheet.querySelector('[data-sheet="cancel"]').style.visibility = "hidden";   // keeps the title centred
+    sheet.onclick = async (e) => {
+      if (e.target.closest("[data-sheet]")) return closeSheet(true);
+      const b = e.target.closest("[data-invite]");
+      if (!b) return;
+      const msg = document.getElementById("inviteMsg");
+      if (b.dataset.invite === "share" && navigator.share) {
+        try { await navigator.share({ text: code }); } catch (_) {}
+      } else {
+        try { await navigator.clipboard.writeText(code); msg.textContent = "Copied."; }
+        catch (_) { msg.textContent = "Couldn't copy automatically. Press and hold the code to copy it."; }
+      }
+    };
+  });
+}
+
 renderAll();
 showTab("summary");
+startSync();
 </script>
 </body>
 </html>
