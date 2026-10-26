@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  PRIVACY GUARD (Content Security Policy).
+  This tells the browser what this page is allowed to load or contact.
+  default-src 'none'  -> by default, nothing: no servers, no fetch(), no analytics,
+                         no fonts or scripts from other websites.
+  The only exceptions are the script and styles written inline in this one file,
+  plus the app's own icon and manifest files from the same site it is served from
+  (used to install it on a phone's home screen). fetch() and every other site stay
+  blocked, so even if a bug (or a malicious bank CSV) tried to send your data
+  somewhere, the browser itself would refuse.
+-->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; manifest-src 'self'; form-action 'none'; base-uri 'none'">
+<title>Pocket Ledger</title>
+<!-- Home-screen app settings: name, icon, and no browser bars when opened from the icon. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ledger">
+<meta name="theme-color" content="#f4f3ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)">
+<style>
+  /* Colours are defined once as "tokens" and referenced by role, so dark mode
+     only needs to swap the values in one place. */
+  :root {
+    color-scheme: light;
+    --bg: #f4f3ef;
+    --surface: #fcfcfb;
+    --border: #e2e0da;
+    --grid: #ebe9e3;
+    --text: #0b0b0b;
+    --text-2: #52514e;
+    --text-3: #7a7974;
+    --accent: #2a78d6;
+    --series-in: #2a78d6;   /* categorical slot 1 (blue)   */
+    --series-out: #eb6834;  /* categorical slot 2 (orange) */
+    --good: #1a7f37;
+    --bad: #c4312f;
+    --track: #e8e6e0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #121211;
+      --surface: #1a1a19;
+      --border: #2e2e2b;
+      --grid: #272725;
+      --text: #f0efec;
+      --text-2: #c3c2b7;
+      --text-3: #92918a;
+      --accent: #3987e5;
+      --series-in: #3987e5;
+      --series-out: #d95926;
+      --good: #4ac26b;
+      --bad: #ff7b72;
+      --track: #2c2c29;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #121211; --surface: #1a1a19; --border: #2e2e2b; --grid: #272725;
+    --text: #f0efec; --text-2: #c3c2b7; --text-3: #92918a; --accent: #3987e5;
+    --series-in: #3987e5; --series-out: #d95926; --good: #4ac26b; --bad: #ff7b72; --track: #2c2c29;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 16px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; margin-bottom: 12px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  h3 { font-size: 14px; margin: 16px 0 8px; color: var(--text-2); text-transform: uppercase; letter-spacing: .04em; }
+  .muted { color: var(--text-2); }
+  .small { font-size: 13px; }
+
+  nav.tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  nav.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; color: var(--text-2); font: inherit; cursor: pointer; white-space: nowrap; }
+  nav.tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+
+  .month-nav { display: flex; align-items: center; gap: 6px; }
+  .month-nav strong { min-width: 120px; text-align: center; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; position: relative; }
+  .grid { display: grid; gap: 12px; }
+  .tiles { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 12px; }
+  .two { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .tile .label { color: var(--text-2); font-size: 13px; }
+  .tile .value { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; margin: 2px 0; }
+  .pos { color: var(--good); } .neg { color: var(--bad); }
+  .progress { height: 8px; background: var(--track); border-radius: 4px; overflow: hidden; margin: 8px 0 4px; }
+  .progress > div { height: 100%; background: var(--accent); border-radius: 4px; }
+
+  button, .btn { font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.danger { color: var(--bad); }
+  button.link { border: 0; background: none; padding: 2px 4px; color: var(--accent); }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input, select { font: inherit; font-size: 14px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); min-width: 0; }
+  label.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-2); }
+  .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: end; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+  th { color: var(--text-2); font-weight: 500; font-size: 13px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .table-scroll { overflow-x: auto; }
+  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--track); color: var(--text-2); }
+
+  .chart { width: 100%; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart text { fill: var(--text-2); font-size: 12px; font-family: inherit; }
+  .chart .value-label { fill: var(--text); font-variant-numeric: tabular-nums; }
+  .chart .hit { fill: transparent; cursor: default; }
+  .chart .hit:hover + .bar, .chart .hit:focus + .bar { opacity: .8; }
+  .legend { display: flex; gap: 16px; font-size: 13px; color: var(--text-2); margin-bottom: 8px; }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+  .tooltip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; z-index: 5; }
+  .tooltip strong { font-variant-numeric: tabular-nums; }
+  .tooltip .row::before { content: ""; display: inline-block; width: 10px; height: 2px; margin-right: 6px; vertical-align: 3px; background: var(--c); }
+
+  .notice { border-left: 3px solid var(--accent); padding: 8px 12px; background: var(--surface); border-radius: 4px; margin-bottom: 12px; font-size: 14px; }
+  .notice.warn { border-left-color: var(--bad); }
+  .empty { color: var(--text-3); padding: 24px 0; text-align: center; }
+  .hidden { display: none !important; }
+  ul.facts { padding-left: 20px; } ul.facts li { margin-bottom: 6px; }
+
+  @media (max-width: 520px) {
+    .tile .value { font-size: 22px; }
+    .hide-sm { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Pocket Ledger</h1>
+    <div class="month-nav" aria-label="Choose month">
+      <button id="prevMonth" aria-label="Previous month">‹</button>
+      <strong id="monthLabel"></strong>
+      <button id="nextMonth" aria-label="Next month">›</button>
+      <button id="thisMonth" class="link">Today</button>
+    </div>
+  </header>
+
+  <div id="storageWarning" class="notice warn hidden"></div>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="dashboard" aria-selected="true">Dashboard</button>
+    <button role="tab" data-tab="transactions">Transactions</button>
+    <button role="tab" data-tab="categories">Categories</button>
+    <button role="tab" data-tab="import">Import CSV</button>
+    <button role="tab" data-tab="data">Your data</button>
+  </nav>
+
+  <!-- ============ DASHBOARD ============ -->
+  <section id="tab-dashboard" role="tabpanel">
+    <div class="grid tiles">
+      <div class="card tile"><div class="label">Money in</div><div class="value" id="tIn"></div><div class="small muted">Income this month</div></div>
+      <div class="card tile"><div class="label">Money out</div><div class="value" id="tOut"></div><div class="small muted">Spending this month</div></div>
+      <div class="card tile"><div class="label">Net</div><div class="value" id="tNet"></div><div class="small muted" id="tNetNote"></div></div>
+      <div class="card tile">
+        <div class="label">Saved</div><div class="value" id="tSaved"></div>
+        <div class="progress" role="progressbar" aria-label="Savings goal progress" id="savingsBar"><div></div></div>
+        <div class="small muted" id="tSavedNote"></div>
+      </div>
+    </div>
+    <div class="grid two">
+      <div class="card">
+        <h2>Where the money went</h2>
+        <div class="chart" id="catChart"></div>
+      </div>
+      <div class="card">
+        <h2>Month by month</h2>
+        <div class="legend"><span style="--c: var(--series-in)">Money in</span><span style="--c: var(--series-out)">Money out</span></div>
+        <div class="chart" id="trendChart"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TRANSACTIONS ============ -->
+  <section id="tab-transactions" role="tabpanel" class="hidden">
+    <div class="card" style="margin-bottom:12px">
+      <h2 id="txFormTitle">Add a transaction</h2>
+      <form id="txForm" autocomplete="off">
+        <div class="form-row">
+          <label class="field">Amount (£)<input id="txAmount" inputmode="decimal" placeholder="12.50" required></label>
+          <label class="field">Date<input id="txDate" type="date" required></label>
+          <label class="field">Category<select id="txCategory" required></select></label>
+          <label class="field" style="grid-column: span 2">Note<input id="txNote" maxlength="200" placeholder="e.g. Tesco weekly shop"></label>
+        </div>
+        <div class="actions">
+          <button class="primary" type="submit" id="txSubmit">Add transaction</button>
+          <button type="button" id="txCancel" class="hidden">Cancel edit</button>
+        </div>
+        <p class="small muted" style="margin:8px 0 0">The category decides whether it counts as income, spending or savings. Enter refunds as a negative spending amount.</p>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Transactions in <span id="txMonthLabel"></span></h2>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Date</th><th>Note</th><th class="hide-sm">Category</th><th class="num">Amount</th><th></th></tr></thead>
+        <tbody id="txBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- ============ CATEGORIES ============ -->
+  <section id="tab-categories" role="tabpanel" class="hidden">
+    <div class="card" style="margin-bottom:12px">
+      <h2>Add a category</h2>
+      <form id="catForm" class="form-row" autocomplete="off">
+        <label class="field">Name<input id="catName" maxlength="40" required></label>
+        <label class="field">Type<select id="catKind">
+          <option value="expense">Spending</option><option value="income">Income</option><option value="savings">Savings</option>
+        </select></label>
+        <div><button class="primary" type="submit">Add category</button></div>
+      </form>
+    </div>
+    <div class="card" id="catList"></div>
+  </section>
+
+  <!-- ============ IMPORT ============ -->
+  <section id="tab-import" role="tabpanel" class="hidden">
+    <div class="card">
+      <h2>Import a CSV</h2>
+      <p class="muted small">In the Monzo app: <em>Account → Bank statements → Export</em>, choose CSV. Pick the file below.
+        It is read by your browser only — the file never leaves this device. Transactions you have already imported are skipped automatically.</p>
+      <input type="file" id="csvFile" accept=".csv,text/csv">
+      <div id="importMapping" class="hidden" style="margin-top:16px"></div>
+      <div id="importPreview" class="hidden" style="margin-top:16px"></div>
+    </div>
+  </section>
+
+  <!-- ============ DATA & PRIVACY ============ -->
+  <section id="tab-data" role="tabpanel" class="hidden">
+    <div class="card" style="margin-bottom:12px">
+      <h2>Where your data lives</h2>
+      <ul class="facts">
+        <li><strong>Only in this browser, on this device.</strong> Everything is saved in the browser's <em>localStorage</em> — a small storage area the browser keeps on your disk for this page.</li>
+        <li><strong>Nothing is sent anywhere.</strong> The page has no server, no account and no analytics, and it carries a security policy that makes the browser block any attempt to contact the internet.</li>
+        <li><strong>Who can see it:</strong> anyone who can use this browser profile on this computer, and browser extensions you have given permission to read pages. It is <em>not</em> encrypted — use a device login/password.</li>
+        <li><strong>It can be lost:</strong> clearing browsing data / site data, using a private window, or switching browser or computer means you won't see it. Download a backup now and then.</li>
+      </ul>
+      <p class="small muted" id="storageStats"></p>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <h2>Monthly savings goal</h2>
+      <form id="goalForm" class="form-row">
+        <label class="field">Goal per month (£)<input id="goalInput" inputmode="decimal" placeholder="300"></label>
+        <div><button type="submit" class="primary">Save goal</button></div>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Backup &amp; reset</h2>
+      <p class="small muted">A backup is a JSON file containing all your transactions, categories and settings. Store it somewhere you trust.</p>
+      <div class="actions">
+        <button id="exportBtn">Download backup</button>
+        <label class="btn">Restore from backup<input type="file" id="restoreFile" accept=".json,application/json" class="hidden"></label>
+        <button id="wipeBtn" class="danger">Erase all data</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="tooltip" class="tooltip hidden" role="status"></div>
+
+<script>
+"use strict";
+
+/* =========================================================================
+   1. STORAGE
+   All data is one JavaScript object, saved as JSON text under one key in
+   localStorage. "v1" in the key + a version field let a future version of the
+   app recognise and upgrade old data instead of breaking it.
+   ========================================================================= */
+const STORAGE_KEY = "pocketLedger.v1";
+const SCHEMA_VERSION = 1;
+
+function defaultState() {
+  const cat = (name, kind) => ({ id: newId(), name, kind });
+  return {
+    version: SCHEMA_VERSION,
+    categories: [
+      cat("Groceries", "expense"), cat("Rent", "expense"), cat("Bills", "expense"),
+      cat("Transport", "expense"), cat("Eating out", "expense"), cat("Shopping", "expense"),
+      cat("Entertainment", "expense"), cat("General", "expense"),
+      cat("Salary", "income"), cat("Other income", "income"),
+      cat("Savings", "savings"),
+    ],
+    // amount is stored in PENCE as a whole number (see README: why not decimals?)
+    transactions: [],   // { id, date: "YYYY-MM-DD", amount, categoryId, note, importId? }
+    settings: { savingsGoal: 30000 },
+  };
+}
+
+let storageOk = true;
+
+function loadState() {
+  let raw;
+  try {
+    raw = localStorage.getItem(STORAGE_KEY);
+  } catch (e) {
+    storageOk = false;
+    showStorageWarning("Your browser is blocking storage for this page, so nothing you enter will be saved. " +
+      "This happens in some private windows or with strict cookie settings.");
+    return defaultState();
+  }
+  if (!raw) return defaultState();
+  try {
+    const data = JSON.parse(raw);
+    if (data.version !== SCHEMA_VERSION || !Array.isArray(data.transactions)) throw new Error("Unknown format");
+    return data;
+  } catch (e) {
+    // Never silently overwrite data we can't read — park it under a separate key.
+    try { localStorage.setItem(STORAGE_KEY + ".unreadable." + Date.now(), raw); } catch (_) {}
+    showStorageWarning("Saved data could not be read, so the app started fresh. The old data was kept aside, not deleted.");
+    return defaultState();
+  }
+}
+
+function save() {
+  if (!storageOk) return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    showStorageWarning("Saving failed (" + e.name + "). Your browser's storage may be full. Download a backup from 'Your data'.");
+  }
+}
+
+function showStorageWarning(msg) {
+  const box = document.getElementById("storageWarning");
+  box.textContent = msg;
+  box.classList.remove("hidden");
+}
+
+let state = loadState();
+
+// If you have the app open in two tabs, keep them in sync.
+window.addEventListener("storage", (e) => {
+  if (e.key === STORAGE_KEY && e.newValue) { state = JSON.parse(e.newValue); renderAll(); }
+});
+
+/* =========================================================================
+   2. SMALL HELPERS
+   ========================================================================= */
+function newId() {
+  return (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+}
+
+// Escape text before putting it into HTML. Without this, a transaction note
+// like <img onerror=...> from a CSV could run code in the page (an "XSS" bug).
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+const gbp = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
+const fmt = (pence) => gbp.format(pence / 100);
+const fmtShort = (pence) => {
+  const pounds = pence / 100;
+  return Math.abs(pounds) >= 1000 ? "£" + (pounds / 1000).toFixed(pounds % 1000 === 0 ? 0 : 1) + "k" : "£" + Math.round(pounds);
+};
+
+// "12.50" -> 1250. Returns null if it isn't a number.
+function parsePence(input) {
+  const cleaned = String(input).replace(/[£,\s]/g, "");
+  if (!/^[-+]?\d*\.?\d+$/.test(cleaned)) return null;
+  return Math.round(parseFloat(cleaned) * 100);
+}
+
+// Today's date in YOUR time zone. (new Date().toISOString() would give the UTC
+// date, which is "yesterday" late in the evening for half the world.)
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+// Months are handled as "YYYY-MM" strings — easy to compare and sort.
+const monthOf = (iso) => iso.slice(0, 7);
+function addMonths(key, n) {
+  let [y, m] = key.split("-").map(Number);
+  m += n;
+  while (m > 12) { m -= 12; y++; }
+  while (m < 1) { m += 12; y--; }
+  return y + "-" + String(m).padStart(2, "0");
+}
+function monthName(key, style = "long") {
+  const [y, m] = key.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleString("en-GB", style === "long" ? { month: "long", year: "numeric" } : { month: "short" });
+}
+
+const catById = (id) => state.categories.find((c) => c.id === id);
+const kindOf = (tx) => (catById(tx.categoryId) || { kind: "expense" }).kind;
+const KIND_LABEL = { expense: "Spending", income: "Income", savings: "Savings" };
+
+/* =========================================================================
+   3. CALCULATIONS — pure functions: data in, numbers out, no page changes.
+   Keeping these separate from the drawing code makes them easy to check.
+   ========================================================================= */
+function monthTotals(month) {
+  const t = { income: 0, expense: 0, savings: 0 };
+  for (const tx of state.transactions) {
+    if (monthOf(tx.date) === month) t[kindOf(tx)] += tx.amount;
+  }
+  return { in: t.income, out: t.expense, saved: t.savings, net: t.income - t.expense };
+}
+
+function spendingByCategory(month) {
+  const sums = new Map();
+  for (const tx of state.transactions) {
+    if (monthOf(tx.date) !== month || kindOf(tx) !== "expense") continue;
+    sums.set(tx.categoryId, (sums.get(tx.categoryId) || 0) + tx.amount);
+  }
+  return [...sums]
+    .map(([id, amount]) => ({ name: (catById(id) || { name: "Unknown" }).name, amount }))
+    .filter((r) => r.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
+}
+
+/* =========================================================================
+   4. RENDERING
+   ========================================================================= */
+let currentMonth = monthOf(todayISO());
+let currentTab = "dashboard";
+
+function renderAll() {
+  document.getElementById("monthLabel").textContent = monthName(currentMonth);
+  renderDashboard();
+  renderTransactions();
+  renderCategoryOptions();
+  renderCategories();
+  renderDataTab();
+}
+
+function renderDashboard() {
+  const t = monthTotals(currentMonth);
+  const goal = state.settings.savingsGoal || 0;
+  document.getElementById("tIn").textContent = fmt(t.in);
+  document.getElementById("tOut").textContent = fmt(t.out);
+  const netEl = document.getElementById("tNet");
+  netEl.textContent = (t.net > 0 ? "+" : "") + fmt(t.net);
+  netEl.className = "value " + (t.net > 0 ? "pos" : t.net < 0 ? "neg" : "");
+  const left = t.net - t.saved;
+  document.getElementById("tNetNote").textContent = t.saved
+    ? "In − out. After saving " + fmt(t.saved) + ", " + fmt(left) + " " + (left >= 0 ? "left over" : "short")
+    : "Money in minus money out";
+  document.getElementById("tSaved").textContent = fmt(t.saved);
+  const pct = goal > 0 ? Math.max(0, Math.min(100, (t.saved / goal) * 100)) : 0;
+  const bar = document.getElementById("savingsBar");
+  bar.firstElementChild.style.width = pct + "%";
+  bar.setAttribute("aria-valuenow", Math.round(pct));
+  document.getElementById("tSavedNote").textContent = goal > 0
+    ? Math.round((t.saved / goal) * 100) + "% of your " + fmt(goal) + " monthly goal"
+    : "Set a monthly goal in 'Your data'";
+  drawCategoryChart();
+  drawTrendChart();
+}
+
+function renderTransactions() {
+  document.getElementById("txMonthLabel").textContent = monthName(currentMonth);
+  const rows = state.transactions
+    .filter((tx) => monthOf(tx.date) === currentMonth)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const body = document.getElementById("txBody");
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="5" class="empty">No transactions this month. Add one above or import a CSV.</td></tr>';
+    return;
+  }
+  body.innerHTML = rows.map((tx) => {
+    const cat = catById(tx.categoryId);
+    const kind = kindOf(tx);
+    const sign = kind === "income" ? "+" : kind === "expense" ? "−" : "→ ";
+    const cls = kind === "income" ? "pos" : "";
+    const day = new Date(tx.date + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    return `<tr>
+      <td>${esc(day)}</td>
+      <td>${esc(tx.note || "—")}</td>
+      <td class="hide-sm"><span class="pill">${esc(cat ? cat.name : "Unknown")}</span></td>
+      <td class="num ${cls}">${sign}${esc(fmt(Math.abs(tx.amount)))}${tx.amount < 0 && kind === "expense" ? " <span class='small muted'>(refund)</span>" : ""}</td>
+      <td class="num"><button class="link" data-edit="${esc(tx.id)}">Edit</button><button class="link danger" data-del="${esc(tx.id)}">Delete</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function renderCategoryOptions() {
+  const sel = document.getElementById("txCategory");
+  const keep = sel.value;
+  sel.innerHTML = ["expense", "income", "savings"].map((kind) =>
+    `<optgroup label="${KIND_LABEL[kind]}">` +
+    state.categories.filter((c) => c.kind === kind)
+      .map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("") +
+    "</optgroup>").join("");
+  if (keep && catById(keep)) sel.value = keep;
+}
+
+function renderCategories() {
+  const counts = new Map();
+  for (const tx of state.transactions) counts.set(tx.categoryId, (counts.get(tx.categoryId) || 0) + 1);
+  document.getElementById("catList").innerHTML = ["expense", "income", "savings"].map((kind) => `
+    <h3>${KIND_LABEL[kind]}</h3>
+    <table><tbody>
+    ${state.categories.filter((c) => c.kind === kind).map((c) => `
+      <tr>
+        <td><input value="${esc(c.name)}" data-rename="${esc(c.id)}" maxlength="40" aria-label="Category name"></td>
+        <td class="small muted">${counts.get(c.id) || 0} transactions</td>
+        <td class="num">
+          <select data-kind="${esc(c.id)}" aria-label="Category type">
+            ${["expense", "income", "savings"].map((k) => `<option value="${k}" ${k === c.kind ? "selected" : ""}>${KIND_LABEL[k]}</option>`).join("")}
+          </select>
+          <button class="link danger" data-delcat="${esc(c.id)}">Delete</button>
+        </td>
+      </tr>`).join("")}
+    </tbody></table>`).join("");
+}
+
+function renderDataTab() {
+  const goal = state.settings.savingsGoal;
+  const input = document.getElementById("goalInput");
+  if (document.activeElement !== input) input.value = goal ? (goal / 100).toFixed(2) : "";
+  let size = 0;
+  try { size = (localStorage.getItem(STORAGE_KEY) || "").length; } catch (_) {}
+  document.getElementById("storageStats").textContent =
+    `Currently stored: ${state.transactions.length} transactions, ${state.categories.length} categories (about ${Math.max(1, Math.round(size / 1024))} KB of the ~5,000 KB browsers allow).`;
+}
+
+/* =========================================================================
+   5. CHARTS — drawn by hand as SVG, so there's no outside library to load.
+   ========================================================================= */
+const SVG_NS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs, text) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  if (text != null) el.textContent = text;   // textContent = safe, never parsed as HTML
+  return el;
+}
+
+// A bar with only its data end rounded (radius r), anchored flat to the baseline.
+function barPath(x, y, w, h, r, horizontal) {
+  r = Math.min(r, horizontal ? w : h, horizontal ? h / 2 : w / 2);
+  if (horizontal) return `M${x},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x} Z`;
+  return `M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h} Z`;
+}
+
+const tooltip = document.getElementById("tooltip");
+function showTip(evt, lines) {
+  tooltip.replaceChildren(...lines.map((l) => {
+    const div = document.createElement("div");
+    if (l.color) { div.className = "row"; div.style.setProperty("--c", l.color); }
+    const strong = document.createElement("strong");
+    strong.textContent = l.value;
+    div.append(strong, document.createTextNode(l.label ? "  " + l.label : ""));
+    return div;
+  }));
+  tooltip.classList.remove("hidden");
+  let x, y;
+  if (evt.type === "focus") {
+    const r = evt.target.getBoundingClientRect(); x = r.right; y = r.top;
+  } else { x = evt.clientX; y = evt.clientY; }
+  const tw = tooltip.offsetWidth;
+  const left = Math.min(x + 12, window.innerWidth - tw - 8);
+  tooltip.style.left = left + window.scrollX + "px";
+  tooltip.style.top = y + window.scrollY - tooltip.offsetHeight - 10 + "px";
+}
+const hideTip = () => tooltip.classList.add("hidden");
+
+function attachTip(el, lines) {
+  el.setAttribute("tabindex", "0");
+  el.addEventListener("pointermove", (e) => showTip(e, lines));
+  el.addEventListener("focus", (e) => showTip(e, lines));
+  el.addEventListener("pointerleave", hideTip);
+  el.addEventListener("blur", hideTip);
+}
+
+function drawCategoryChart() {
+  const box = document.getElementById("catChart");
+  const rows = spendingByCategory(currentMonth);
+  box.replaceChildren();
+  if (!rows.length) { box.innerHTML = '<div class="empty">No spending recorded for this month yet.</div>'; return; }
+  const total = rows.reduce((s, r) => s + r.amount, 0);
+  const W = Math.max(280, box.clientWidth), rowH = 30, labelW = Math.min(130, W * 0.32), valueW = 108;
+  const H = rows.length * rowH;
+  const plotW = W - labelW - valueW;
+  const max = rows[0].amount;
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img",
+    "aria-label": "Spending by category: " + rows.map((r) => `${r.name} ${fmt(r.amount)}`).join(", ") });
+  rows.forEach((r, i) => {
+    const y = i * rowH, barH = 14, by = y + (rowH - barH) / 2;
+    const w = Math.max(2, (r.amount / max) * plotW);
+    const pct = Math.round((r.amount / total) * 100);
+    svg.append(svgEl("text", { x: labelW - 8, y: y + rowH / 2 + 4, "text-anchor": "end" }, truncate(r.name, labelW)));
+    const hit = svgEl("rect", { class: "hit", x: 0, y, width: W, height: rowH, "aria-label": `${r.name}: ${fmt(r.amount)}, ${pct}%` });
+    attachTip(hit, [{ value: fmt(r.amount), label: `${r.name} · ${pct}% of spending` }]);
+    svg.append(hit);
+    svg.append(svgEl("path", { class: "bar", d: barPath(labelW, by, w, barH, 4, true), fill: "var(--series-in)", "pointer-events": "none" }));
+    svg.append(svgEl("text", { class: "value-label", x: labelW + w + 6, y: y + rowH / 2 + 4, "pointer-events": "none" }, `${fmt(r.amount)}  ${pct}%`));
+  });
+  box.append(svg);
+  const foot = document.createElement("p");
+  foot.className = "small muted";
+  foot.style.margin = "8px 0 0";
+  // Categories whose refunds outweighed spending can't be drawn as a bar, so say so —
+  // the footer must match the "Money out" tile.
+  const out = monthTotals(currentMonth).out;
+  foot.textContent = "Total spending: " + fmt(out) + (out !== total ? ` (includes ${fmt(total - out)} of refunds not shown above)` : "");
+  box.append(foot);
+}
+
+function truncate(s, px) {
+  const maxChars = Math.floor(px / 7);
+  return s.length > maxChars ? s.slice(0, maxChars - 1) + "…" : s;
+}
+
+function drawTrendChart() {
+  const box = document.getElementById("trendChart");
+  box.replaceChildren();
+  const months = [];
+  for (let i = 5; i >= 0; i--) months.push(addMonths(currentMonth, -i));
+  const data = months.map((m) => ({ m, ...monthTotals(m) }));
+  const max = Math.max(...data.map((d) => Math.max(d.in, d.out)));
+  if (max <= 0) { box.innerHTML = '<div class="empty">Nothing recorded in the last six months yet.</div>'; return; }
+
+  const W = Math.max(280, box.clientWidth), H = 220, padL = 44, padB = 24, padT = 8;
+  const plotW = W - padL, plotH = H - padB - padT;
+  const step = niceStep(max / 4), top = Math.ceil(max / step) * step;
+  const yOf = (v) => padT + plotH - (Math.max(0, v) / top) * plotH;
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img",
+    "aria-label": "Money in and out per month: " + data.map((d) => `${monthName(d.m, "short")} in ${fmt(d.in)}, out ${fmt(d.out)}`).join("; ") });
+
+  for (let v = 0; v <= top; v += step) {
+    svg.append(svgEl("line", { x1: padL, x2: W, y1: yOf(v), y2: yOf(v), stroke: "var(--grid)", "stroke-width": 1 }));
+    svg.append(svgEl("text", { x: padL - 6, y: yOf(v) + 4, "text-anchor": "end" }, fmtShort(v)));
+  }
+  const groupW = plotW / data.length, barW = Math.min(22, (groupW * 0.6) / 2);
+  data.forEach((d, i) => {
+    const gx = padL + i * groupW, cx = gx + groupW / 2;
+    const hit = svgEl("rect", { class: "hit", x: gx, y: padT, width: groupW, height: plotH + padB,
+      "aria-label": `${monthName(d.m)}: in ${fmt(d.in)}, out ${fmt(d.out)}` });
+    attachTip(hit, [
+      { value: monthName(d.m) },
+      { value: fmt(d.in), label: "in", color: "var(--series-in)" },
+      { value: fmt(d.out), label: "out", color: "var(--series-out)" },
+      { value: (d.net >= 0 ? "+" : "") + fmt(d.net), label: "net" },
+      ...(d.saved ? [{ value: fmt(d.saved), label: "saved" }] : []),
+    ]);
+    svg.append(hit);
+    [[d.in, "var(--series-in)", cx - barW - 1], [d.out, "var(--series-out)", cx + 1]].forEach(([v, color, x]) => {
+      if (v <= 0) return;
+      const y = yOf(v), h = padT + plotH - y;
+      svg.append(svgEl("path", { d: barPath(x, y, barW, h, 4, false), fill: color, "pointer-events": "none" }));
+    });
+    const lbl = svgEl("text", { x: cx, y: H - 6, "text-anchor": "middle" }, monthName(d.m, "short"));
+    if (d.m === currentMonth) lbl.setAttribute("style", "fill: var(--text); font-weight: 600");
+    svg.append(lbl);
+  });
+  svg.append(svgEl("line", { x1: padL, x2: W, y1: padT + plotH, y2: padT + plotH, stroke: "var(--border)", "stroke-width": 1 }));
+  box.append(svg);
+}
+
+// Round an axis step to 1, 2 or 5 × a power of ten, so labels look like £500, not £437.
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const n = raw / p;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+}
+
+let resizeTimer;
+window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { drawCategoryChart(); drawTrendChart(); }, 150); });
+
+/* =========================================================================
+   6. CSV IMPORT
+   ========================================================================= */
+
+// Turn CSV text into rows of fields. Handles quoted fields that contain commas,
+// quotes ("") or line breaks — splitting on "," alone would break on those.
+function parseCSV(text) {
+  text = text.replace(/^﻿/, "");   // strip the invisible "byte order mark" some exports start with
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') inQuotes = false;
+      else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); rows.push(row); row = []; field = "";
+    } else field += c;
+  }
+  if (field !== "" || row.length) { row.push(field); rows.push(row); }
+  return rows.filter((r) => r.some((f) => f.trim() !== ""));
+}
+
+// Accepts 31/01/2026 (UK, as Monzo uses) or 2026-01-31. Returns "YYYY-MM-DD" or null.
+function parseDate(s) {
+  s = String(s).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (m) {
+    const y = m[3].length === 2 ? "20" + m[3] : m[3];
+    return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  }
+  return null;
+}
+
+// Monzo uses names like "eating_out"; turn them into "Eating out".
+const prettyName = (s) => { s = s.replace(/_/g, " ").trim(); return s.charAt(0).toUpperCase() + s.slice(1); };
+
+const MONZO_REQUIRED = ["Transaction ID", "Date", "Type", "Name", "Category", "Amount"];
+
+let pendingImport = null;
+
+document.getElementById("csvFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const rows = parseCSV(await file.text());   // read locally by the browser, never uploaded
+  e.target.value = "";
+  if (rows.length < 2) return showImportError("That file doesn't seem to contain any rows.");
+  const header = rows[0].map((h) => h.trim());
+  const isMonzo = MONZO_REQUIRED.every((h) => header.includes(h));
+  if (isMonzo) {
+    const col = Object.fromEntries(header.map((h, i) => [h, i]));
+    prepareImport(rows.slice(1).map((r) => ({
+      importId: "monzo:" + r[col["Transaction ID"]],
+      date: parseDate(r[col["Date"]]),
+      amount: parsePence(r[col["Amount"]]),
+      category: r[col["Category"]] || "",
+      isPot: /pot transfer/i.test(r[col["Type"]] || ""),
+      note: [r[col["Name"]], col["Notes and #tags"] != null ? r[col["Notes and #tags"]] : ""].filter((s) => s && s.trim()).join(" — "),
+    })), "Monzo export detected — columns were matched automatically.");
+  } else {
+    showMappingForm(header, rows.slice(1));
+  }
+});
+
+// Fallback for other banks: let the user say which column is which.
+function showMappingForm(header, body) {
+  const box = document.getElementById("importMapping");
+  const guess = (re) => header.findIndex((h) => re.test(h));
+  const opts = (sel, optional) => (optional ? '<option value="-1">(none)</option>' : "") +
+    header.map((h, i) => `<option value="${i}" ${i === sel ? "selected" : ""}>${esc(h || "Column " + (i + 1))}</option>`).join("");
+  box.innerHTML = `
+    <div class="notice">This doesn't look like a Monzo export. Tell me which column is which:</div>
+    <div class="form-row">
+      <label class="field">Date<select id="mapDate">${opts(guess(/date/i))}</select></label>
+      <label class="field">Amount (negative = spent)<select id="mapAmount">${opts(guess(/amount|value/i))}</select></label>
+      <label class="field">Description<select id="mapNote">${opts(guess(/desc|name|payee|merchant|memo/i), true)}</select></label>
+      <label class="field">Category<select id="mapCat">${opts(guess(/categ/i), true)}</select></label>
+    </div>
+    <div class="actions"><button class="primary" id="mapGo">Preview import</button></div>`;
+  box.classList.remove("hidden");
+  document.getElementById("importPreview").classList.add("hidden");
+  document.getElementById("mapGo").onclick = () => {
+    const ix = (id) => Number(document.getElementById(id).value);
+    const [d, a, n, c] = [ix("mapDate"), ix("mapAmount"), ix("mapNote"), ix("mapCat")];
+    prepareImport(body.map((r) => {
+      const item = { date: parseDate(r[d]), amount: parsePence(r[a]), note: n >= 0 ? r[n] || "" : "", category: c >= 0 ? r[c] || "" : "", isPot: false };
+      // No transaction ID in a generic file, so build one from the row itself to detect re-imports.
+      item.importId = "csv:" + [item.date, item.amount, item.note].join("|");
+      return item;
+    }), "Columns mapped.");
+  };
+}
+
+function showImportError(msg) {
+  const box = document.getElementById("importPreview");
+  box.innerHTML = `<div class="notice warn">${esc(msg)}</div>`;
+  box.classList.remove("hidden");
+}
+
+// Decide, for each bank row, which of YOUR categories (and so which kind) it belongs to.
+// Bank amounts are from the account's point of view: −20 = money left the account.
+function classify(item) {
+  if (item.isPot) return { kind: "savings", name: "Savings", amount: -item.amount };
+  const bankCat = (item.category || "").trim().toLowerCase();
+  if (item.amount > 0 && (bankCat === "" || bankCat === "income" || bankCat === "transfers")) {
+    return { kind: "income", name: "Other income", amount: item.amount };
+  }
+  // Money out, or a refund (money back in a spending category) which reduces spending.
+  return { kind: "expense", name: prettyName(bankCat || "General"), amount: -item.amount };
+}
+
+function prepareImport(items, headline) {
+  document.getElementById("importMapping").classList.add("hidden");
+  const known = new Set(state.transactions.map((t) => t.importId).filter(Boolean));
+  const result = { add: [], dupes: 0, invalid: 0, newCats: new Map() };
+  for (const item of items) {
+    if (!item.date || item.amount == null) { result.invalid++; continue; }
+    if (item.amount === 0) continue;   // e.g. £0 card checks
+    if (known.has(item.importId)) { result.dupes++; continue; }
+    known.add(item.importId);
+    const c = classify(item);
+    let cat = state.categories.find((x) => x.kind === c.kind && x.name.toLowerCase() === c.name.toLowerCase())
+      || result.newCats.get(c.kind + ":" + c.name.toLowerCase());
+    if (!cat) { cat = { id: newId(), name: c.name, kind: c.kind }; result.newCats.set(c.kind + ":" + c.name.toLowerCase(), cat); }
+    result.add.push({ id: newId(), date: item.date, amount: c.amount, categoryId: cat.id, note: item.note.slice(0, 200), importId: item.importId });
+  }
+  pendingImport = result;
+  const box = document.getElementById("importPreview");
+  const byKind = { income: 0, expense: 0, savings: 0 };
+  const cats = new Map([...state.categories, ...result.newCats.values()].map((c) => [c.id, c]));
+  for (const t of result.add) byKind[cats.get(t.categoryId).kind]++;
+  const months = [...new Set(result.add.map((t) => monthOf(t.date)))].sort();
+  box.innerHTML = `
+    <div class="notice">${esc(headline)}</div>
+    <ul class="facts">
+      <li><strong>${result.add.length}</strong> new transactions to add (${byKind.expense} spending, ${byKind.income} income, ${byKind.savings} savings)
+        ${months.length ? `from ${esc(monthName(months[0]))} to ${esc(monthName(months[months.length - 1]))}` : ""}</li>
+      ${result.dupes ? `<li>${result.dupes} already imported — will be skipped</li>` : ""}
+      ${result.invalid ? `<li>${result.invalid} rows couldn't be read (missing date or amount) — will be skipped</li>` : ""}
+      ${result.newCats.size ? `<li>New categories to create: ${[...result.newCats.values()].map((c) => esc(c.name)).join(", ")}</li>` : ""}
+    </ul>
+    <div class="actions">
+      <button class="primary" id="importGo" ${result.add.length ? "" : "disabled"}>Import ${result.add.length} transactions</button>
+      <button id="importCancel">Cancel</button>
+    </div>`;
+  box.classList.remove("hidden");
+  document.getElementById("importGo").onclick = commitImport;
+  document.getElementById("importCancel").onclick = () => { pendingImport = null; box.classList.add("hidden"); };
+}
+
+function commitImport() {
+  if (!pendingImport) return;
+  state.categories.push(...pendingImport.newCats.values());
+  state.transactions.push(...pendingImport.add);
+  const latest = pendingImport.add.map((t) => t.date).sort().pop();
+  const n = pendingImport.add.length;
+  pendingImport = null;
+  save();
+  if (latest) currentMonth = monthOf(latest);
+  document.getElementById("importPreview").innerHTML = `<div class="notice">Imported ${n} transactions. Showing ${esc(monthName(currentMonth))}.</div>`;
+  renderAll();
+}
+
+/* =========================================================================
+   7. EVENT HANDLERS — what happens when you click or type.
+   ========================================================================= */
+document.querySelector("nav.tabs").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-tab]");
+  if (!btn) return;
+  currentTab = btn.dataset.tab;
+  for (const b of document.querySelectorAll("nav.tabs button")) b.setAttribute("aria-selected", b === btn);
+  for (const s of document.querySelectorAll("section[role=tabpanel]")) s.classList.toggle("hidden", s.id !== "tab-" + currentTab);
+  if (currentTab === "dashboard") { drawCategoryChart(); drawTrendChart(); }   // charts need visible size
+});
+
+document.getElementById("prevMonth").onclick = () => { currentMonth = addMonths(currentMonth, -1); renderAll(); };
+document.getElementById("nextMonth").onclick = () => { currentMonth = addMonths(currentMonth, 1); renderAll(); };
+document.getElementById("thisMonth").onclick = () => { currentMonth = monthOf(todayISO()); renderAll(); };
+
+// --- Add / edit transaction ---
+let editingId = null;
+const txForm = document.getElementById("txForm");
+document.getElementById("txDate").value = todayISO();
+
+txForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const amount = parsePence(document.getElementById("txAmount").value);
+  if (amount == null || amount === 0) { alert("Please enter an amount, like 12.50"); return; }
+  const tx = {
+    date: document.getElementById("txDate").value,
+    amount,
+    categoryId: document.getElementById("txCategory").value,
+    note: document.getElementById("txNote").value.trim(),
+  };
+  if (editingId) Object.assign(state.transactions.find((t) => t.id === editingId), tx);
+  else state.transactions.push({ id: newId(), ...tx });
+  save();
+  currentMonth = monthOf(tx.date);
+  resetTxForm();
+  renderAll();
+});
+
+function resetTxForm() {
+  editingId = null;
+  document.getElementById("txAmount").value = "";
+  document.getElementById("txNote").value = "";
+  document.getElementById("txFormTitle").textContent = "Add a transaction";
+  document.getElementById("txSubmit").textContent = "Add transaction";
+  document.getElementById("txCancel").classList.add("hidden");
+}
+document.getElementById("txCancel").onclick = resetTxForm;
+
+document.getElementById("txBody").addEventListener("click", (e) => {
+  const edit = e.target.dataset.edit, del = e.target.dataset.del;
+  if (edit) {
+    const tx = state.transactions.find((t) => t.id === edit);
+    editingId = edit;
+    document.getElementById("txAmount").value = (tx.amount / 100).toFixed(2);
+    document.getElementById("txDate").value = tx.date;
+    document.getElementById("txCategory").value = tx.categoryId;
+    document.getElementById("txNote").value = tx.note;
+    document.getElementById("txFormTitle").textContent = "Edit transaction";
+    document.getElementById("txSubmit").textContent = "Save changes";
+    document.getElementById("txCancel").classList.remove("hidden");
+    txForm.scrollIntoView({ behavior: "smooth" });
+  } else if (del && confirm("Delete this transaction?")) {
+    state.transactions = state.transactions.filter((t) => t.id !== del);
+    save(); renderAll();
+  }
+});
+
+// --- Categories ---
+document.getElementById("catForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const name = document.getElementById("catName").value.trim();
+  const kind = document.getElementById("catKind").value;
+  if (!name) return;
+  if (state.categories.some((c) => c.kind === kind && c.name.toLowerCase() === name.toLowerCase())) { alert("That category already exists."); return; }
+  state.categories.push({ id: newId(), name, kind });
+  document.getElementById("catName").value = "";
+  save(); renderAll();
+});
+
+const catList = document.getElementById("catList");
+catList.addEventListener("change", (e) => {
+  const renameId = e.target.dataset.rename, kindId = e.target.dataset.kind;
+  if (renameId) {
+    const name = e.target.value.trim();
+    if (name) catById(renameId).name = name;
+  } else if (kindId) {
+    if (state.categories.filter((c) => c.kind === catById(kindId).kind).length === 1) {
+      alert("Keep at least one category of each type."); renderCategories(); return;
+    }
+    catById(kindId).kind = e.target.value;
+  } else return;
+  save(); renderAll();
+});
+catList.addEventListener("click", (e) => {
+  const id = e.target.dataset.delcat;
+  if (!id) return;
+  const cat = catById(id);
+  const siblings = state.categories.filter((c) => c.kind === cat.kind && c.id !== id);
+  if (!siblings.length) { alert("Keep at least one category of each type."); return; }
+  const used = state.transactions.filter((t) => t.categoryId === id);
+  const target = siblings.find((c) => /^(general|other)/i.test(c.name)) || siblings[0];
+  const msg = used.length
+    ? `Delete "${cat.name}"? Its ${used.length} transactions will move to "${target.name}".`
+    : `Delete "${cat.name}"?`;
+  if (!confirm(msg)) return;
+  for (const t of used) t.categoryId = target.id;
+  state.categories = state.categories.filter((c) => c.id !== id);
+  save(); renderAll();
+});
+
+// --- Settings, backup, wipe ---
+document.getElementById("goalForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const v = document.getElementById("goalInput").value.trim();
+  const pence = v === "" ? 0 : parsePence(v);
+  if (pence == null || pence < 0) { alert("Please enter an amount, like 300"); return; }
+  state.settings.savingsGoal = pence;
+  save(); renderAll();
+});
+
+document.getElementById("exportBtn").onclick = async () => {
+  // Builds the file in memory and hands it to your browser's download — no server involved.
+  const name = `pocket-ledger-backup-${todayISO()}.json`;
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  // On phones, downloads from a home-screen app are unreliable, so open the share sheet
+  // instead ("Save to Files"). The file goes only where you choose to send it.
+  const file = new File([blob], name, { type: "application/json" });
+  if (matchMedia("(pointer: coarse)").matches && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); return; }
+    catch (e) { if (e.name === "AbortError") return; }   // cancelled by you; otherwise fall back to download
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+
+document.getElementById("restoreFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (data.version !== SCHEMA_VERSION || !Array.isArray(data.transactions) || !Array.isArray(data.categories)) throw new Error();
+    if (!confirm(`Replace everything currently stored with this backup (${data.transactions.length} transactions)?`)) return;
+    state = data;
+    save(); renderAll();
+  } catch (_) {
+    alert("That file isn't a Pocket Ledger backup.");
+  }
+});
+
+document.getElementById("wipeBtn").onclick = () => {
+  if (!confirm("Erase all transactions, categories and settings from this browser? This can't be undone unless you have a backup.")) return;
+  try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+  state = defaultState();
+  save(); renderAll();
+};
+
+renderAll();
+</script>
+</body>
+</html>
