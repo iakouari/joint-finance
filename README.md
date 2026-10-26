@@ -13,6 +13,7 @@ Your phone and your computer each keep their own separate data. Move it between 
 
 ## Features
 
+- Designed to feel like an iPhone app, following Apple's Human Interface Guidelines: a floating tab bar, large titles, inset grouped lists, add/edit sheets, Dark Mode, large text sizes, and 44-point tap targets.
 - Add, edit and delete transactions (amount, date, category, note).
 - Your own categories. Each one has a type (Spending, Income or Savings), and the type decides how its transactions are counted.
 - A dashboard for any month: money in, money out, net, and how much you saved compared with a monthly goal.
