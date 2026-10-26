@@ -20,13 +20,13 @@
 -->
 <meta http-equiv="Content-Security-Policy"
       content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; manifest-src 'self'; connect-src https://YOUR-PROJECT.supabase.co; form-action 'none'; base-uri 'none'">
-<title>Pocket Ledger</title>
+<title>Joint Finance Tracker</title>
 <!-- Home-screen app settings: name, icon, and no browser bars when opened from the icon. -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Ledger">
+<meta name="apple-mobile-web-app-title" content="Joint">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
@@ -206,8 +206,8 @@
   .tabbar {
     position: fixed; z-index: 20; left: 50%; transform: translateX(-50%);
     bottom: max(10px, env(safe-area-inset-bottom));
-    width: min(calc(100% - 32px), 420px);
-    display: grid; grid-template-columns: repeat(4, 1fr); padding: 4px;
+    width: min(calc(100% - 24px), 460px);
+    display: grid; grid-template-columns: repeat(5, 1fr); padding: 4px;
     border-radius: 32px; background: var(--glass); border: 0.5px solid var(--glass-border);
     -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px);
     box-shadow: var(--shadow);
@@ -221,7 +221,7 @@
   .tabbar button[aria-selected="true"] { color: var(--tint); background: var(--fill); }
   /* Tablets and computers: the tab bar sits at the top (tab-bars.md › Tablet). */
   @media (min-width: 768px) {
-    .tabbar { top: max(12px, env(safe-area-inset-top)); bottom: auto; width: auto; grid-template-columns: repeat(4, auto); gap: 2px; }
+    .tabbar { top: max(12px, env(safe-area-inset-top)); bottom: auto; width: auto; grid-template-columns: repeat(5, auto); gap: 2px; }
     .tabbar button { flex-direction: row; gap: 6px; padding: 0 16px; font-size: 0.882rem; min-height: 44px; }
     .tabbar button svg { width: 20px; height: 20px; }
     .app { padding-top: 64px; padding-bottom: 40px; }
@@ -302,60 +302,96 @@
   .hidden { display: none !important; }
   .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   #storageWarning { margin-top: 12px; }
+  /* ---------- Joint Finance additions ---------- */
+  /* Glass buttons in the navigation bar, after iOS 26's Liquid Glass controls. */
+  .glass-btn {
+    background: var(--glass); border: 0.5px solid var(--glass-border);
+    -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  }
+  @media (prefers-reduced-transparency: reduce) { .glass-btn { background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+  .nav-actions { gap: 8px; }
+  .period { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .period .segmented { margin: 0; max-width: 260px; }
+
+  .hero-card { padding: 18px 16px 16px; }
+  .hero-card .label { font-size: 0.882rem; color: var(--label-2); }
+  .hero-card .big { font-size: clamp(1.9rem, 10vw, 2.6rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin: 2px 0 4px; }
+  .hero-card .delta { font-size: 0.882rem; color: var(--label-2); }
+  .people { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .person { background: var(--fill); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+  .person .who { font-size: 0.765rem; color: var(--label-2); display: flex; align-items: center; gap: 6px; }
+  .person .who::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .person .amt { font-size: 1.12rem; font-weight: 650; margin-top: 2px; }
+  .person .note { font-size: 0.765rem; color: var(--label-2); margin-top: 2px; }
+  .progress { height: 8px; background: var(--fill); border-radius: 4px; overflow: hidden; margin: 10px 0 4px; }
+  .progress > div { height: 100%; background: var(--pos); border-radius: 4px; }
+  .card-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .card-row .grow { flex: 1; min-width: 0; }
+  .card-row .k { font-size: 0.882rem; color: var(--label-2); }
+  .card-row .v { font-size: 1.3rem; font-weight: 700; }
+  .stack { display: grid; gap: 12px; margin-top: 4px; }
+  @media (min-width: 768px) { .stack.two { grid-template-columns: 1fr 1fr; } .stack.two > .span { grid-column: 1 / -1; } }
+
+  .badge.bill { background: rgba(88, 86, 214, 0.14); color: #5856d6; }
+  .badge.voucher { background: rgba(255, 149, 0, 0.16); color: #c93400; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .badge.bill { color: #7d7aff; } :root:not([data-theme="light"]) .badge.voucher { color: #ffb340; } }
+  .status-btn {
+    min-height: 32px; padding: 0 14px; border-radius: 16px; border: 0; cursor: pointer; flex: none;
+    background: var(--tint-fill); color: #fff; font: inherit; font-size: 0.882rem; font-weight: 600;
+  }
+  .status-paid { color: var(--pos); font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+  .status-paid svg { width: 16px; height: 16px; }
+  .overdue { color: var(--neg); }
+
+  .split-preview { display: flex; justify-content: space-between; gap: 8px; font-size: 0.882rem; color: var(--label-2); margin: 8px 16px 0; }
+  .split-preview strong { color: var(--label); font-variant-numeric: tabular-nums; }
+  .sheet .segmented { margin-bottom: 10px; }
+  .sheet .section-header { margin-top: 18px; }
+  .wide-btn { width: 100%; min-height: 50px; border-radius: 25px; font-size: 1.06rem; }
+  .actions.center { justify-content: center; }
+  .actions.center .btn { flex: 1; max-width: 220px; }
 </style>
 </head>
 <body>
 <div class="app" id="app">
   <header class="navbar">
     <div class="nav-actions">
-      <button class="icon-btn filled" id="addBtn" aria-label="Add transaction">
+      <button class="icon-btn glass-btn" id="addBtn" aria-label="Add expense">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       </button>
     </div>
-    <h1 class="large-title" id="screenTitle">Summary</h1>
-    <div class="month-switch" id="monthSwitch">
-      <button class="icon-btn" id="prevMonth" aria-label="Previous month">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
-      </button>
-      <span class="label" id="monthLabel" aria-live="polite"></span>
-      <button class="icon-btn" id="nextMonth" aria-label="Next month">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
-      </button>
-      <button class="icon-btn" id="thisMonth">Today</button>
+    <h1 class="large-title" id="screenTitle">Home</h1>
+    <div class="period" id="periodBox">
+      <div class="segmented" role="group" aria-label="Period" id="modeSeg">
+        <button type="button" data-mode="week" aria-pressed="true">Week</button>
+        <button type="button" data-mode="month" aria-pressed="false">Month</button>
+      </div>
+      <div class="month-switch">
+        <button class="icon-btn" id="prevPeriod" aria-label="Previous">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <span class="label" id="periodLabel" aria-live="polite"></span>
+        <button class="icon-btn" id="nextPeriod" aria-label="Next">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <button class="icon-btn" id="thisPeriod">Today</button>
+      </div>
     </div>
     <div id="storageWarning" class="notice warn hidden" role="alert"></div>
   </header>
 
-  <!-- ============ SUMMARY ============ -->
-  <section id="tab-summary" class="screen" role="tabpanel" aria-labelledby="tabbtn-summary">
-    <div class="summary-grid">
-      <div class="span">
-        <div class="group" style="margin-top:4px">
-          <div class="hero">
-            <div class="grow" style="flex:1;min-width:0">
-              <div class="net-label">Net this month</div>
-              <div class="net money" id="tNet"></div>
-              <div class="flows">
-                <div class="flow" style="--c: var(--series-in)"><div class="k">Money in</div><div class="v money" id="tIn"></div></div>
-                <div class="flow" style="--c: var(--series-out)"><div class="k">Money out</div><div class="v money" id="tOut"></div></div>
-              </div>
-            </div>
-            <div class="ring" id="ring"></div>
-          </div>
-          <div class="goal-hint hidden" id="goalHint"></div>
-        </div>
-        <p class="section-footer" id="tNetNote"></p>
-      </div>
+  <!-- ============ HOME ============ -->
+  <section id="tab-home" class="screen" role="tabpanel" aria-labelledby="tabbtn-home">
+    <div class="stack two" id="homeCards"></div>
+    <div class="stack two">
       <div>
-        <h2 class="section-header">Spending by category</h2>
+        <h2 class="section-header">By category</h2>
         <div class="group card-pad"><div class="chart" id="catChart"></div></div>
       </div>
       <div>
-        <h2 class="section-header">Last 6 months</h2>
-        <div class="group card-pad">
-          <div class="legend"><span style="--c: var(--series-in)">Money in</span><span style="--c: var(--series-out)">Money out</span></div>
-          <div class="chart" id="trendChart"></div>
-        </div>
+        <h2 class="section-header" id="trendTitle">Recent weeks</h2>
+        <div class="group card-pad"><div class="chart" id="trendChart"></div></div>
       </div>
     </div>
   </section>
@@ -365,33 +401,31 @@
     <div id="txList"></div>
   </section>
 
-  <!-- ============ CATEGORIES ============ -->
-  <section id="tab-categories" class="screen hidden" role="tabpanel" aria-labelledby="tabbtn-categories">
-    <div id="catList"></div>
-    <p class="section-footer">The type decides how a category's transactions count: as money out, money in, or money put aside.</p>
+  <!-- ============ BILLS ============ -->
+  <section id="tab-bills" class="screen hidden" role="tabpanel" aria-labelledby="tabbtn-bills">
+    <div id="billsBox"></div>
+  </section>
+
+  <!-- ============ VOUCHERS ============ -->
+  <section id="tab-vouchers" class="screen hidden" role="tabpanel" aria-labelledby="tabbtn-vouchers">
+    <div id="voucherBox"></div>
   </section>
 
   <!-- ============ SETTINGS ============ -->
   <section id="tab-settings" class="screen hidden" role="tabpanel" aria-labelledby="tabbtn-settings">
-    <h2 class="section-header">Savings</h2>
+    <h2 class="section-header">People</h2>
     <div class="group">
-      <div class="field-row">
-        <label for="goalInput">Monthly goal</label>
-        <input id="goalInput" class="money" inputmode="decimal" enterkeyhint="done" placeholder="£0.00" autocomplete="off">
-      </div>
+      <div class="field-row"><label for="nameP1">Person 1</label><input id="nameP1" maxlength="20" autocomplete="off"></div>
+      <div class="field-row"><label for="nameP2">Person 2</label><input id="nameP2" maxlength="20" autocomplete="off"></div>
     </div>
-    <p class="section-footer">The ring on Summary fills as you move money into Savings categories.</p>
+    <p class="section-footer">Used for splits, money paid in, and who added what.</p>
 
-    <h2 class="section-header">Import</h2>
-    <div class="group">
-      <label class="row action" style="cursor:pointer">
-        <span class="grow">Import Monzo CSV…</span>
-        <input type="file" id="csvFile" accept=".csv,text/csv" class="visually-hidden">
-      </label>
-      <div id="importMapping" class="import-box hidden"></div>
-      <div id="importPreview" class="import-box hidden"></div>
-    </div>
-    <p class="section-footer">In Monzo: Account → Bank statements → Export → CSV. The file is read on this device only. Transactions you have already imported are skipped.</p>
+    <h2 class="section-header">Categories</h2>
+    <div id="catList"></div>
+
+    <h2 class="section-header">Sharing</h2>
+    <div class="group" id="sharingBox"></div>
+    <p class="section-footer" id="sharingFooter"></p>
 
     <h2 class="section-header">Backup</h2>
     <div class="group">
@@ -403,15 +437,11 @@
     </div>
     <p class="section-footer" id="storageStats"></p>
 
-    <h2 class="section-header">Sharing</h2>
-    <div class="group" id="sharingBox"></div>
-    <p class="section-footer" id="sharingFooter"></p>
-
     <h2 class="section-header">Your data</h2>
     <div class="group">
-      <div class="row"><div class="grow"><div class="title">Stays on this device</div><div class="sub" id="privacyStay">Saved in this browser's storage. There is no server and no account.</div></div></div>
+      <div class="row"><div class="grow"><div class="title">Stays on this device</div><div class="sub" id="privacyStay">Saved in this browser's storage. There is no account.</div></div></div>
       <div class="row"><div class="grow"><div class="title" id="privacySentTitle">Never sent anywhere</div><div class="sub" id="privacySent">A security policy makes the browser block every network request from this app.</div></div></div>
-      <div class="row"><div class="grow"><div class="title">Who can see it</div><div class="sub">Anyone who can unlock this device and use this browser. It isn't encrypted, so keep a passcode on.</div></div></div>
+      <div class="row"><div class="grow"><div class="title">Who can see it</div><div class="sub">Anyone who can unlock this device and use this browser. It isn't encrypted on the phone, so keep a passcode on.</div></div></div>
       <div class="row"><div class="grow"><div class="title">How it could be lost</div><div class="sub">Clearing Safari's website data, or removing the home-screen icon. Download a backup now and then.</div></div></div>
     </div>
 
@@ -421,19 +451,23 @@
   </section>
 </div>
 
-<!-- Tab bar: navigation only, four sections, single-word labels (tab-bars.md › Best practices) -->
+<!-- Tab bar: navigation only, five sections, single-word labels (tab-bars.md › Best practices) -->
 <nav class="tabbar" role="tablist" aria-label="Sections">
-  <button role="tab" id="tabbtn-summary" data-tab="summary" aria-selected="true">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V12l6 6"/></svg>
-    Summary
+  <button role="tab" id="tabbtn-home" data-tab="home" aria-selected="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/></svg>
+    Home
   </button>
   <button role="tab" id="tabbtn-activity" data-tab="activity" aria-selected="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></svg>
     Activity
   </button>
-  <button role="tab" id="tabbtn-categories" data-tab="categories" aria-selected="false">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3-8.7 8.7z"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/></svg>
-    Categories
+  <button role="tab" id="tabbtn-bills" data-tab="bills" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 9.5h16M8.5 3v4M15.5 3v4M8 13.5l2 2 4-4"/></svg>
+    Bills
+  </button>
+  <button role="tab" id="tabbtn-vouchers" data-tab="vouchers" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5V6.5a1 1 0 0 1 1-1h15a1 1 0 0 1 1 1v2a2.5 2.5 0 0 0 0 5v4a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-4a2.5 2.5 0 0 0 0-5z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>
+    Vouchers
   </button>
   <button role="tab" id="tabbtn-settings" data-tab="settings" aria-selected="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>
@@ -449,60 +483,106 @@
 
 <script>
 "use strict";
-
 /* =========================================================================
    1. STORAGE
    All data is one JavaScript object, saved as JSON text under one key in
-   localStorage. "v1" in the key + a version field let a future version of the
-   app recognise and upgrade old data instead of breaking it.
+   localStorage. The version number lets the app recognise older data and
+   convert it (a "migration") instead of breaking.
    ========================================================================= */
-const STORAGE_KEY = "pocketLedger.v1";
-const SCHEMA_VERSION = 1;
+const STORAGE_KEY = "jointFinance.v2";
+const OLD_STORAGE_KEY = "pocketLedger.v1";   // Pocket Ledger, before the rebrand
+const SCHEMA_VERSION = 2;
+
+// Categories belong to a group: "everyday" spending (food, petrol…) shows in the
+// weekly view, "bills" are monthly, and "income" is money paid into the account.
+function defaultCategories() {
+  const cat = (name, group) => ({ id: newId(), name, group });
+  return [
+    cat("Food shop", "everyday"), cat("Petrol", "everyday"), cat("Eating out", "everyday"),
+    cat("Household", "everyday"), cat("Going out", "everyday"), cat("Other", "everyday"),
+    cat("Rent", "bills"), cat("Energy", "bills"), cat("Council tax", "bills"),
+    cat("Internet", "bills"), cat("Water", "bills"), cat("Subscriptions", "bills"),
+    cat("Paid in", "income"), cat("Other income", "income"),
+  ];
+}
 
 function defaultState() {
-  const cat = (name, kind) => ({ id: newId(), name, kind });
   return {
     version: SCHEMA_VERSION,
-    categories: [
-      cat("Groceries", "expense"), cat("Rent", "expense"), cat("Bills", "expense"),
-      cat("Transport", "expense"), cat("Eating out", "expense"), cat("Shopping", "expense"),
-      cat("Entertainment", "expense"), cat("General", "expense"),
-      cat("Salary", "income"), cat("Other income", "income"),
-      cat("Savings", "savings"),
-    ],
-    // amount is stored in PENCE as a whole number (see README: why not decimals?)
-    transactions: [],   // { id, date: "YYYY-MM-DD", amount, categoryId, note, importId? }
-    settings: { savingsGoal: 30000 },
-    // Deleted records, as "tx:<id>" -> time of deletion, so a shared ledger
-    // can tell other phones that something was removed (a "tombstone").
+    categories: defaultCategories(),
+    // amount is stored in PENCE as a whole number. Expenses carry a split;
+    // money paid in carries "from" (p1, p2 or other).
+    // { id, date: "YYYY-MM-DD", amount, categoryId, note, split?, from?, voucher?, billId?, by?, updatedAt }
+    transactions: [],
+    bills: [],      // { id, name, amount, dueDay, categoryId, split, updatedAt }
+    vouchers: [],   // voucher cards bought: { id, date, value, cost, note, updatedAt }
+    settings: { people: { p1: "Isak", p2: "Lucas" } },
+    // Deleted records, as "tx:<id>" -> time of deletion, so a shared ledger can
+    // tell the other phone that something was removed (a "tombstone").
     deleted: {},
   };
 }
 
+// Convert Pocket Ledger data: spending becomes Isak-only expenses, income
+// becomes money paid in by Isak, savings become Isak-only expenses. Nothing is dropped.
+function migrateFromV1(old) {
+  const s = defaultState();
+  const oldKind = new Map(old.categories.map((c) => [c.id, c.kind]));
+  s.categories = old.categories.map((c) => ({ id: c.id, name: c.name, group: c.kind === "income" ? "income" : "everyday" }));
+  for (const d of defaultCategories()) {
+    if (!s.categories.some((c) => c.name.toLowerCase() === d.name.toLowerCase())) s.categories.push(d);
+  }
+  s.transactions = old.transactions.map((t) => {
+    const base = { id: t.id, date: t.date, amount: t.amount, categoryId: t.categoryId, note: t.note || "" };
+    return oldKind.get(t.categoryId) === "income" ? { ...base, from: "p1" } : { ...base, split: { mode: "p1" } };
+  });
+  return s;
+}
+
 let storageOk = true;
+let migratedFromV1 = false;
 
 function loadState() {
-  let raw;
+  let raw, oldRaw;
   try {
     raw = localStorage.getItem(STORAGE_KEY);
+    oldRaw = raw ? null : localStorage.getItem(OLD_STORAGE_KEY);
   } catch (e) {
     storageOk = false;
     showStorageWarning("Your browser is blocking storage for this page, so nothing you enter will be saved. " +
       "This happens in some private windows or with strict cookie settings.");
     return defaultState();
   }
-  if (!raw) return defaultState();
   try {
-    const data = JSON.parse(raw);
-    if (data.version !== SCHEMA_VERSION || !Array.isArray(data.transactions)) throw new Error("Unknown format");
-    data.deleted = data.deleted || {};
-    return data;
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data.version !== SCHEMA_VERSION || !Array.isArray(data.transactions)) throw new Error("Unknown format");
+      return withDefaults(data);
+    }
+    if (oldRaw) {
+      const old = JSON.parse(oldRaw);
+      if (old.version === 1 && Array.isArray(old.transactions)) {
+        migratedFromV1 = true;   // the old copy stays untouched under its own key, as a safety net
+        return migrateFromV1(old);
+      }
+    }
+    return defaultState();
   } catch (e) {
     // Never silently overwrite data we can't read — park it under a separate key.
-    try { localStorage.setItem(STORAGE_KEY + ".unreadable." + Date.now(), raw); } catch (_) {}
+    try { localStorage.setItem(STORAGE_KEY + ".unreadable." + Date.now(), raw || oldRaw); } catch (_) {}
     showStorageWarning("Saved data could not be read, so the app started fresh. The old data was kept aside, not deleted.");
     return defaultState();
   }
+}
+
+function withDefaults(data) {
+  const d = defaultState();
+  data.bills = data.bills || [];
+  data.vouchers = data.vouchers || [];
+  data.deleted = data.deleted || {};
+  data.settings = data.settings || d.settings;
+  data.settings.people = data.settings.people || d.settings.people;
+  return data;
 }
 
 function save(fromSync) {
@@ -510,7 +590,7 @@ function save(fromSync) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) {
-    showStorageWarning("Saving failed (" + e.name + "). Your browser's storage may be full. Download a backup from 'Your data'.");
+    showStorageWarning("Saving failed (" + e.name + "). Your browser's storage may be full. Download a backup from Settings.");
   }
   if (!fromSync && typeof scheduleSync === "function") scheduleSync();
 }
@@ -530,10 +610,11 @@ function showStorageWarning(msg) {
 }
 
 let state = loadState();
+if (migratedFromV1) save(true);
 
 // If you have the app open in two tabs, keep them in sync.
 window.addEventListener("storage", (e) => {
-  if (e.key === STORAGE_KEY && e.newValue) { state = JSON.parse(e.newValue); state.deleted = state.deleted || {}; renderAll(); }
+  if (e.key === STORAGE_KEY && e.newValue) { state = withDefaults(JSON.parse(e.newValue)); renderAll(); }
 });
 
 /* =========================================================================
@@ -543,8 +624,8 @@ function newId() {
   return (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 }
 
-// Escape text before putting it into HTML. Without this, a transaction note
-// like <img onerror=...> from a CSV could run code in the page (an "XSS" bug).
+// Escape text before putting it into HTML. Without this, a note like
+// <img onerror=...> could run code in the page (an "XSS" bug).
 function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -558,17 +639,18 @@ const fmtShort = (pence) => {
 
 // "12.50" -> 1250. Returns null if it isn't a number.
 function parsePence(input) {
-  const cleaned = String(input).replace(/[£,\s]/g, "");
+  const cleaned = String(input).replace(/[£,\s]/g, "").replace(/^−/, "-");
   if (!/^[-+]?\d*\.?\d+$/.test(cleaned)) return null;
   return Math.round(parseFloat(cleaned) * 100);
 }
 
-// Today's date in YOUR time zone. (new Date().toISOString() would give the UTC
-// date, which is "yesterday" late in the evening for half the world.)
-function todayISO() {
-  const d = new Date();
-  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-}
+const pad = (n) => String(n).padStart(2, "0");
+const isoOf = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+// Today's date in YOUR time zone (toISOString() would give the UTC date).
+const todayISO = () => isoOf(new Date());
+function addDays(iso, n) { const d = new Date(iso + "T00:00"); d.setDate(d.getDate() + n); return isoOf(d); }
+// Weeks run Monday to Sunday, as in the UK.
+function weekOf(iso) { const d = new Date(iso + "T00:00"); return addDays(iso, -((d.getDay() + 6) % 7)); }
 
 // Months are handled as "YYYY-MM" strings — easy to compare and sort.
 const monthOf = (iso) => iso.slice(0, 7);
@@ -577,123 +659,260 @@ function addMonths(key, n) {
   m += n;
   while (m > 12) { m -= 12; y++; }
   while (m < 1) { m += 12; y--; }
-  return y + "-" + String(m).padStart(2, "0");
+  return y + "-" + pad(m);
 }
 function monthName(key, style = "long") {
   const [y, m] = key.split("-").map(Number);
   const opts = { long: { month: "long", year: "numeric" }, month: { month: "long" }, short: { month: "short" } }[style];
   return new Date(y, m - 1, 1).toLocaleString("en-GB", opts);
 }
+const dayMonth = (iso) => new Date(iso + "T00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+function weekLabel(ws) {
+  if (ws === weekOf(todayISO())) return "This week";
+  if (ws === weekOf(addDays(todayISO(), -7))) return "Last week";
+  return `${dayMonth(ws)} – ${dayMonth(addDays(ws, 6))}`;
+}
+const ordinal = (n) => n + (n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th");
+function daysInMonth(key) { const [y, m] = key.split("-").map(Number); return new Date(y, m, 0).getDate(); }
 
 const catById = (id) => state.categories.find((c) => c.id === id);
-const kindOf = (tx) => (catById(tx.categoryId) || { kind: "expense" }).kind;
-const KIND_LABEL = { expense: "Spending", income: "Income", savings: "Savings" };
+const groupOf = (tx) => (catById(tx.categoryId) || { group: tx.from ? "income" : "everyday" }).group;
+const isIncome = (tx) => groupOf(tx) === "income";
+const personName = (pid) => (pid === "p1" || pid === "p2") ? state.settings.people[pid] : "Other";
+const GROUP_LABEL = { everyday: "Everyday", bills: "Bills", income: "Paid in" };
 
 /* =========================================================================
    3. CALCULATIONS — pure functions: data in, numbers out, no page changes.
-   Keeping these separate from the drawing code makes them easy to check.
    ========================================================================= */
-function monthTotals(month) {
-  const t = { income: 0, expense: 0, savings: 0 };
-  for (const tx of state.transactions) {
-    if (monthOf(tx.date) === month) t[kindOf(tx)] += tx.amount;
-  }
-  return { in: t.income, out: t.expense, saved: t.savings, net: t.income - t.expense };
+
+// Each person's share of an expense, in pence: [person 1, person 2].
+// The two always add up to exactly the amount, so no penny goes missing.
+function shares(tx) {
+  const a = tx.amount, s = tx.split || { mode: "equal" };
+  let p1;
+  if (s.mode === "p1") p1 = a;
+  else if (s.mode === "p2") p1 = 0;
+  else if (s.mode === "amount") p1 = Math.max(Math.min(s.p1, Math.max(a, 0)), Math.min(a, 0));
+  else if (s.mode === "percent") p1 = Math.round((a * s.p1) / 100);
+  else p1 = Math.round(a / 2);
+  return [p1, a - p1];
 }
 
-function spendingByCategory(month) {
-  const sums = new Map();
-  for (const tx of state.transactions) {
-    if (monthOf(tx.date) !== month || kindOf(tx) !== "expense") continue;
-    sums.set(tx.categoryId, (sums.get(tx.categoryId) || 0) + tx.amount);
-  }
-  return [...sums]
-    .map(([id, amount]) => ({ name: (catById(id) || { name: "Unknown" }).name, amount }))
-    .filter((r) => r.amount > 0)
-    .sort((a, b) => b.amount - a.amount);
+function splitLabel(split, amount) {
+  const s = split || { mode: "equal" };
+  if (s.mode === "p1") return personName("p1") + " only";
+  if (s.mode === "p2") return personName("p2") + " only";
+  if (s.mode === "equal") return "Split 50/50";
+  const [a, b] = shares({ amount, split: s });
+  const pct = amount ? Math.round((a / amount) * 100) : 50;
+  return `Split ${pct}/${100 - pct}`;
 }
 
+// A period is a week ({ type: "week", start }) or a month ({ type: "month", key }).
+function inPeriod(iso, p) {
+  return p.type === "week" ? iso >= p.start && iso <= addDays(p.start, 6) : monthOf(iso) === p.key;
+}
+function shiftPeriod(p, n) {
+  return p.type === "week" ? { type: "week", start: addDays(p.start, 7 * n) } : { type: "month", key: addMonths(p.key, n) };
+}
+const periodLabel = (p) => (p.type === "week" ? weekLabel(p.start) : monthName(p.key));
+
+function periodTotals(p) {
+  const t = { spent: 0, everyday: 0, bills: 0, share: [0, 0], paidIn: [0, 0, 0], voucherUsed: 0, overVoucher: 0, byCategory: new Map() };
+  for (const tx of state.transactions) {
+    if (!inPeriod(tx.date, p)) continue;
+    const g = groupOf(tx);
+    if (g === "income") {
+      t.paidIn[tx.from === "p1" ? 0 : tx.from === "p2" ? 1 : 2] += tx.amount;
+      continue;
+    }
+    t.spent += tx.amount;
+    t[g === "bills" ? "bills" : "everyday"] += tx.amount;
+    const [a, b] = shares(tx);
+    t.share[0] += a; t.share[1] += b;
+    t.byCategory.set(tx.categoryId, (t.byCategory.get(tx.categoryId) || 0) + tx.amount);
+    if (tx.voucher) { t.voucherUsed += tx.voucher; t.overVoucher += tx.amount - tx.voucher; }
+  }
+  return t;
+}
+
+// The shared voucher card: what's been loaded, spent, left, and saved by buying at a discount.
+function voucherSummary() {
+  const loaded = state.vouchers.reduce((s, v) => s + v.value, 0);
+  const saved = state.vouchers.reduce((s, v) => s + (v.value - v.cost), 0);
+  const used = state.transactions.reduce((s, t) => s + (t.voucher || 0), 0);
+  return { loaded, used, saved, balance: loaded - used };
+}
+
+// Which bills have been paid in a month: a bill counts as paid when an expense is linked to it.
+function billStatus(month) {
+  return state.bills
+    .slice()
+    .sort((a, b) => a.dueDay - b.dueDay || a.name.localeCompare(b.name))
+    .map((bill) => {
+      const paid = state.transactions.find((t) => t.billId === bill.id && monthOf(t.date) === month);
+      const dueDate = `${month}-${pad(Math.min(bill.dueDay, daysInMonth(month)))}`;
+      return { bill, paid, dueDate, overdue: !paid && dueDate < todayISO() };
+    });
+}
 
 /* =========================================================================
    4. RENDERING — turns the data into what you see on each screen.
    ========================================================================= */
-let currentMonth = monthOf(todayISO());
-let currentTab = "summary";
+let currentTab = "home";
+let mode = "week";                               // Home and Activity: week or month
+let week = weekOf(todayISO());
+let month = monthOf(todayISO());
+// The period on screen: Bills always shows a month; Home and Activity follow the Week/Month switch.
+const period = () => (currentTab === "bills" || mode === "month") ? { type: "month", key: month } : { type: "week", start: week };
 
 const ICONS = {
-  expense: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 11.5l7-7M6 4.5h5.5V10"/></svg>',
-  income: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 4.5l-7 7M10 11.5H4.5V6"/></svg>',
-  savings: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h9M9 4.5L12.5 8 9 11.5"/></svg>',
+  everyday: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 2.5h2l1.6 7.5h7l1.4-5.5H4.3"/><circle cx="6" cy="13" r="1"/><circle cx="11.5" cy="13" r="1"/></svg>',
+  bills: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7L8 2.5 13.5 7v6.5h-11z"/><path d="M6.5 13.5V10h3v3.5"/></svg>',
+  income: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v9M4 8l4 4 4-4M3 14h10"/></svg>',
+  voucher: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M2 5.5v-1.5h12v1.5a2 2 0 0 0 0 4v1.5h-12v-1.5a2 2 0 0 0 0-4z"/></svg>',
   chevron: '<svg class="chev" viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5L6.5 7l-5 5.5"/></svg>',
+  check: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3 3 7-7"/></svg>',
 };
+const BADGE_CLASS = { everyday: "", bills: "bill", income: "income" };
 
 function renderAll() {
-  document.getElementById("monthLabel").textContent = monthName(currentMonth);
-  renderSummary();
+  renderHeader();
+  renderHome();
   renderActivity();
-  renderCategories();
+  renderBills();
+  renderVouchers();
   renderSettings();
   renderSharing();
 }
 
-function renderSummary() {
-  const t = monthTotals(currentMonth);
-  const goal = state.settings.savingsGoal || 0;
-  document.getElementById("tIn").textContent = fmt(t.in);
-  document.getElementById("tOut").textContent = fmt(t.out);
-  const netEl = document.getElementById("tNet");
-  netEl.textContent = (t.net > 0 ? "+" : "") + fmt(t.net);
-  netEl.className = "net money " + (t.net > 0 ? "pos" : t.net < 0 ? "neg" : "");
-  const left = t.net - t.saved;
-  document.getElementById("tNetNote").textContent = t.saved
-    ? `Net is money in minus money out. After putting ${fmt(t.saved)} into savings, ${fmt(Math.abs(left))} is ${left >= 0 ? "left over" : "missing"}.`
-    : "Net is money in minus money out.";
+function renderHeader() {
+  const p = period();
+  document.getElementById("periodLabel").textContent = periodLabel(p);
+  for (const b of document.querySelectorAll("#modeSeg button")) b.setAttribute("aria-pressed", b.dataset.mode === mode);
+}
 
-  // Savings ring, drawn like an Activity ring. The percentage is printed inside,
-  // so the colour is never the only way to read it.
-  const ring = document.getElementById("ring");
-  const hint = document.getElementById("goalHint");
-  if (goal > 0) {
-    const pct = Math.max(0, t.saved / goal);
-    const r = 42, c = 2 * Math.PI * r, shown = Math.min(1, pct);
-    ring.innerHTML = `
-      <svg viewBox="0 0 104 104" role="img" aria-label="${Math.round(pct * 100)}% of monthly savings goal">
-        <circle cx="52" cy="52" r="${r}" fill="none" stroke="var(--ring-track)" stroke-width="12"/>
-        <circle cx="52" cy="52" r="${r}" fill="none" stroke="var(--ring)" stroke-width="12" stroke-linecap="round"
-          stroke-dasharray="${shown * c} ${c}" transform="rotate(-90 52 52)" ${shown === 0 ? 'stroke-opacity="0"' : ""}/>
-        <text x="52" y="58" text-anchor="middle" class="money" style="font-size:20px;font-weight:700;fill:var(--label)">${Math.round(pct * 100)}%</text>
-      </svg>
-      <div class="cap money">${esc(fmt(t.saved))} of ${esc(fmt(goal))}<br>saved</div>`;
-    ring.classList.remove("hidden");
-    hint.classList.add("hidden");
-  } else {
-    ring.classList.add("hidden");
-    hint.textContent = `Saved ${fmt(t.saved)} this month. Set a monthly goal in Settings to track it.`;
-    hint.classList.remove("hidden");
+function personCard(pid, amount, note, color) {
+  return `<div class="person" style="--c:${color}">
+    <div class="who">${esc(personName(pid))}</div>
+    <div class="amt money">${esc(fmt(amount))}</div>
+    ${note ? `<div class="note">${note}</div>` : ""}</div>`;
+}
+
+function renderHome() {
+  const p = period();
+  const t = periodTotals(p);
+  const prev = periodTotals(shiftPeriod(p, -1));
+  const isWeek = p.type === "week";
+  const headline = isWeek ? t.everyday : t.spent;
+  const before = isWeek ? prev.everyday : prev.spent;
+  const diff = headline - before;
+  const deltaText = !before && !headline ? "Nothing spent yet."
+    : diff === 0 ? "Same as the " + (isWeek ? "week" : "month") + " before."
+    : `${fmt(Math.abs(diff))} ${diff > 0 ? "more" : "less"} than the ${isWeek ? "week" : "month"} before.`;
+  // In week view, the headline is everyday spending (food, petrol…); bills are monthly.
+  const shareNow = isWeek ? sharesOf(p, "everyday") : t.share;
+
+  let html = `
+    <div class="group hero-card span">
+      <div class="label">${isWeek ? "Everyday spending" : "Joint spending"} · ${esc(periodLabel(p))}</div>
+      <div class="big money">${esc(fmt(headline))}</div>
+      <div class="delta">${esc(deltaText)}</div>
+      <div class="people">
+        ${personCard("p1", shareNow[0], "share", "var(--series-in)")}
+        ${personCard("p2", shareNow[1], "share", "var(--series-out)")}
+      </div>
+    </div>`;
+
+  if (!isWeek) {
+    const bs = billStatus(p.key);
+    const paidCount = bs.filter((b) => b.paid).length;
+    const due = bs.reduce((s, b) => s + (b.paid ? b.paid.amount : b.bill.amount), 0);
+    const paidSum = bs.reduce((s, b) => s + (b.paid ? b.paid.amount : 0), 0);
+    html += `
+      <button class="group card-row" data-go="bills" style="border:0;width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer">
+        <span class="badge bill" aria-hidden="true">${ICONS.bills}</span>
+        <span class="grow"><span class="k">Bills</span><br>
+          <span class="v money">${bs.length ? `${paidCount} of ${bs.length} paid` : "No bills yet"}</span>
+          ${bs.length ? `<div class="progress" aria-hidden="true"><div style="width:${due ? Math.min(100, (paidSum / due) * 100) : 0}%"></div></div>
+          <span class="k money">${esc(fmt(paidSum))} of ${esc(fmt(due))}</span>` : `<br><span class="k">Add your rent, energy and so on in Bills.</span>`}
+        </span>${ICONS.chevron}
+      </button>`;
+    const balanceNote = (i) => {
+      const gap = t.paidIn[i] - t.share[i];
+      return gap === 0 ? "Even" : `<span class="${gap < 0 ? "neg" : "pos"}">${gap < 0 ? "Short " : "Over "}${esc(fmt(Math.abs(gap)))}</span>`;
+    };
+    html += `
+      <div class="group hero-card">
+        <div class="label">Paid into the joint account</div>
+        <div class="people">
+          ${personCard("p1", t.paidIn[0], `Share ${esc(fmt(t.share[0]))} · ${balanceNote(0)}`, "var(--series-in)")}
+          ${personCard("p2", t.paidIn[1], `Share ${esc(fmt(t.share[1]))} · ${balanceNote(1)}`, "var(--series-out)")}
+        </div>
+        <div class="delta" style="margin-top:10px">In ${esc(fmt(t.paidIn[0] + t.paidIn[1] + t.paidIn[2]))} · Out ${esc(fmt(t.spent))}</div>
+      </div>`;
   }
-  if (currentTab === "summary") { drawCategoryChart(); drawTrendChart(); }
+
+  const v = voucherSummary();
+  html += `
+    <div class="group card-row">
+      <span class="badge voucher" aria-hidden="true">${ICONS.voucher}</span>
+      <span class="grow"><span class="k">Voucher balance</span><br><span class="v money">${esc(fmt(v.balance))}</span>
+        ${t.overVoucher ? `<br><span class="k">${esc(fmt(t.overVoucher))} over on voucher shops ${isWeek ? "this week" : "this month"}</span>` : ""}</span>
+      <button class="status-btn" data-action="logshop">Log Shop</button>
+    </div>`;
+  document.getElementById("homeCards").innerHTML = html;
+  if (currentTab === "home") drawHomeCharts();
+}
+
+function sharesOf(p, group) {
+  const s = [0, 0];
+  for (const tx of state.transactions) {
+    if (!inPeriod(tx.date, p) || groupOf(tx) !== group) continue;
+    const [a, b] = shares(tx);
+    s[0] += a; s[1] += b;
+  }
+  return s;
 }
 
 // "Today", "Yesterday", or "Monday 20 October".
 function dayHeading(iso) {
-  const today = todayISO();
-  const y = new Date(); y.setDate(y.getDate() - 1);
-  const yesterday = y.getFullYear() + "-" + String(y.getMonth() + 1).padStart(2, "0") + "-" + String(y.getDate()).padStart(2, "0");
-  if (iso === today) return "Today";
-  if (iso === yesterday) return "Yesterday";
+  if (iso === todayISO()) return "Today";
+  if (iso === addDays(todayISO(), -1)) return "Yesterday";
   return new Date(iso + "T00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 }
 
+function txRow(tx) {
+  const cat = catById(tx.categoryId);
+  const g = groupOf(tx);
+  const income = g === "income";
+  const title = tx.note || (cat ? cat.name : "—");
+  const bits = [cat ? cat.name : "Unknown"];
+  if (income) bits.push("from " + personName(tx.from));
+  else {
+    bits.push(splitLabel(tx.split, tx.amount));
+    if (tx.voucher) bits.push(tx.amount > tx.voucher ? `${fmt(tx.amount - tx.voucher)} over voucher` : "voucher");
+  }
+  if (addedByOther(tx)) bits.push("added by " + personName(tx.by));
+  const sign = income ? "+" : tx.amount < 0 ? "+" : "−";
+  return `<button class="row" data-edit="${esc(tx.id)}" aria-label="${esc(`${title}, ${income ? "paid in" : "spent"} ${fmt(Math.abs(tx.amount))}. Edit`)}">
+    <span class="badge ${tx.voucher ? "voucher" : BADGE_CLASS[g]}" aria-hidden="true">${tx.voucher ? ICONS.voucher : ICONS[g]}</span>
+    <span class="grow"><div class="title">${esc(title)}</div><div class="sub">${esc(bits.join(" · "))}</div></span>
+    <span class="amount money ${income || tx.amount < 0 ? "pos" : ""}">${sign}${esc(fmt(Math.abs(tx.amount)))}</span>
+    ${ICONS.chevron}
+  </button>`;
+}
+
 function renderActivity() {
-  const rows = state.transactions
-    .filter((tx) => monthOf(tx.date) === currentMonth)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const p = period();
+  const rows = state.transactions.filter((tx) => inPeriod(tx.date, p))
+    .sort((a, b) => b.date.localeCompare(a.date) || (b.updatedAt || 0) - (a.updatedAt || 0));
   const box = document.getElementById("txList");
   if (!rows.length) {
     box.innerHTML = `<div class="empty-state">
-      <h2>No transactions in ${esc(monthName(currentMonth, "month"))}</h2>
-      <p>Add one with the + button, or import a Monzo CSV in Settings.</p>
-      <button class="btn primary" data-action="add">Add Transaction</button></div>`;
+      <h2>Nothing in ${esc(p.type === "week" ? weekLabel(p.start).replace(/^This/, "this").replace(/^Last/, "last") : monthName(p.key, "month"))}</h2>
+      <p>Add an expense with the + button, or log a shop.</p>
+      <div class="actions center"><button class="btn primary" data-action="add">Add Expense</button><button class="btn" data-action="logshop">Log Shop</button></div></div>`;
     return;
   }
   const byDay = new Map();
@@ -701,50 +920,106 @@ function renderActivity() {
     if (!byDay.has(tx.date)) byDay.set(tx.date, []);
     byDay.get(tx.date).push(tx);
   }
+  const t = periodTotals(p);
   box.innerHTML = [...byDay].map(([day, txs]) => `
     <h2 class="section-header">${esc(dayHeading(day))}</h2>
-    <div class="group" style="--sep-inset: 60px">
-      ${txs.map((tx) => {
-        const cat = catById(tx.categoryId);
-        const kind = kindOf(tx);
-        const refund = kind === "expense" && tx.amount < 0;
-        const sign = kind === "income" || refund ? "+" : kind === "expense" ? "−" : "";
-        const label = `${tx.note || (cat ? cat.name : "Transaction")}, ${KIND_LABEL[kind]}, ${sign}${fmt(Math.abs(tx.amount))}`;
-        return `<button class="row" data-edit="${esc(tx.id)}" aria-label="${esc(label)}. Edit">
-          <span class="badge ${kind}" aria-hidden="true">${ICONS[kind]}</span>
-          <span class="grow"><div class="title">${esc(tx.note || (cat ? cat.name : "—"))}</div>
-            <div class="sub">${esc(cat ? cat.name : "Unknown")}${refund ? " · Refund" : kind === "savings" ? (tx.amount < 0 ? " · Withdrawn" : " · Saved") : ""}${addedByOther(tx) ? " · " + esc(tx.by) : ""}</div></span>
-          <span class="amount money ${kind === "income" || refund ? "pos" : ""}">${sign}${esc(fmt(Math.abs(tx.amount)))}</span>
-          ${ICONS.chevron}
-        </button>`;
-      }).join("")}
-    </div>`).join("") + `<p class="section-footer">${rows.length} transaction${rows.length === 1 ? "" : "s"} in ${esc(monthName(currentMonth))}.</p>`;
+    <div class="group" style="--sep-inset: 60px">${txs.map(txRow).join("")}</div>`).join("")
+    + `<p class="section-footer">Spent ${esc(fmt(t.spent))} · ${esc(personName("p1"))} ${esc(fmt(t.share[0]))} · ${esc(personName("p2"))} ${esc(fmt(t.share[1]))}${t.paidIn.some(Boolean) ? ` · Paid in ${esc(fmt(t.paidIn[0] + t.paidIn[1] + t.paidIn[2]))}` : ""}</p>`;
 }
 
-function renderCategories() {
-  const counts = new Map();
-  for (const tx of state.transactions) counts.set(tx.categoryId, (counts.get(tx.categoryId) || 0) + 1);
-  document.getElementById("catList").innerHTML = ["expense", "income", "savings"].map((kind) => `
-    <h2 class="section-header">${KIND_LABEL[kind]}</h2>
+function renderBills() {
+  const box = document.getElementById("billsBox");
+  const bs = billStatus(month);
+  if (!state.bills.length) {
+    box.innerHTML = `<div class="empty-state"><h2>No bills yet</h2>
+      <p>Add the bills you pay every month, like rent and energy. Each month you tick them off as paid.</p>
+      <button class="btn primary" data-action="addbill">Add Bill</button></div>`;
+    return;
+  }
+  const total = bs.reduce((s, b) => s + (b.paid ? b.paid.amount : b.bill.amount), 0);
+  const paid = bs.reduce((s, b) => s + (b.paid ? b.paid.amount : 0), 0);
+  const [s1, s2] = bs.reduce((acc, b) => {
+    const [a, c] = shares({ amount: b.paid ? b.paid.amount : b.bill.amount, split: b.paid ? b.paid.split : b.bill.split });
+    return [acc[0] + a, acc[1] + c];
+  }, [0, 0]);
+  box.innerHTML = `
+    <div class="group hero-card">
+      <div class="label">${esc(monthName(month))}</div>
+      <div class="big money">${esc(fmt(paid))} <span class="muted" style="font-size:1.1rem;font-weight:600">of ${esc(fmt(total))} paid</span></div>
+      <div class="progress" aria-hidden="true"><div style="width:${total ? Math.min(100, (paid / total) * 100) : 0}%"></div></div>
+      <div class="people">${personCard("p1", s1, "share of bills", "var(--series-in)")}${personCard("p2", s2, "share of bills", "var(--series-out)")}</div>
+    </div>
+    <h2 class="section-header">Bills</h2>
     <div class="group" style="--sep-inset: 60px">
-    ${state.categories.filter((c) => c.kind === kind).sort((a, b) => a.name.localeCompare(b.name)).map((c) => `
-      <button class="row" data-cat="${esc(c.id)}" aria-label="${esc(c.name)}, ${counts.get(c.id) || 0} transactions. Edit">
-        <span class="badge ${kind}" aria-hidden="true">${ICONS[kind]}</span>
-        <span class="grow title">${esc(c.name)}</span>
-        <span class="trail">${counts.get(c.id) || 0}</span>
-        ${ICONS.chevron}
-      </button>`).join("")}
-    </div>`).join("");
+      ${bs.map(({ bill, paid, dueDate, overdue }) => `
+        <div class="row" style="padding-right:12px">
+          <button class="row" data-bill="${esc(bill.id)}" style="padding:0;min-height:0;flex:1" aria-label="${esc(bill.name)}. Edit bill">
+            <span class="badge bill" aria-hidden="true">${ICONS.bills}</span>
+            <span class="grow"><div class="title">${esc(bill.name)}</div>
+              <div class="sub ${overdue ? "overdue" : ""}">${overdue ? "Overdue · " : ""}Due ${esc(ordinal(Number(dueDate.slice(8))))} · ${esc(splitLabel(bill.split, bill.amount))}</div></span>
+          </button>
+          ${paid
+            ? `<button class="status-paid" data-edit="${esc(paid.id)}" style="border:0;background:none;font:inherit;cursor:pointer;min-height:44px" aria-label="Paid ${esc(fmt(paid.amount))}. Edit payment">${ICONS.check}<span class="money">${esc(fmt(paid.amount))}</span></button>`
+            : `<button class="status-btn" data-pay="${esc(bill.id)}" aria-label="Mark ${esc(bill.name)} paid, ${esc(fmt(bill.amount))}">Pay ${esc(fmt(bill.amount))}</button>`}
+        </div>`).join("")}
+    </div>
+    <p class="section-footer">Tap “Pay” to record a bill as paid from the joint account. You can change the amount if it varies.</p>`;
+}
+
+function renderVouchers() {
+  const v = voucherSummary();
+  const items = [
+    ...state.vouchers.map((x) => ({ date: x.date, kind: "load", rec: x, at: x.updatedAt || 0 })),
+    ...state.transactions.filter((t) => t.voucher).map((t) => ({ date: t.date, kind: "use", rec: t, at: t.updatedAt || 0 })),
+  ].sort((a, b) => b.date.localeCompare(a.date) || b.at - a.at);
+  document.getElementById("voucherBox").innerHTML = `
+    <div class="group hero-card">
+      <div class="label">Voucher balance</div>
+      <div class="big money ${v.balance < 0 ? "neg" : ""}">${esc(fmt(v.balance))}</div>
+      <div class="delta">${v.saved > 0 ? `Saved ${esc(fmt(v.saved))} so far by buying vouchers at a discount.` : "Add the vouchers you buy from the employee portal."}</div>
+      <div class="actions center" style="margin-top:14px">
+        <button class="btn primary" data-action="logshop">Log Shop</button>
+        <button class="btn" data-action="addvoucher">Add Voucher</button>
+      </div>
+    </div>
+    ${items.length ? `<h2 class="section-header">History</h2>
+    <div class="group" style="--sep-inset: 60px">
+      ${items.slice(0, 100).map(({ kind, rec }) => kind === "load"
+        ? `<button class="row" data-voucher="${esc(rec.id)}" aria-label="${esc(`Voucher ${fmt(rec.value)} bought for ${fmt(rec.cost)}. Edit`)}">
+            <span class="badge income" aria-hidden="true">${ICONS.voucher}</span>
+            <span class="grow"><div class="title">${esc(rec.note || "Voucher")}</div>
+              <div class="sub">${esc(dayMonth(rec.date))} · paid ${esc(fmt(rec.cost))}${rec.value > rec.cost ? ` · saved ${esc(fmt(rec.value - rec.cost))}` : ""}</div></span>
+            <span class="amount money pos">+${esc(fmt(rec.value))}</span>${ICONS.chevron}</button>`
+        : `<button class="row" data-edit="${esc(rec.id)}" aria-label="${esc(`${rec.note || "Shop"}, ${fmt(rec.voucher)} from voucher. Edit`)}">
+            <span class="badge voucher" aria-hidden="true">${ICONS.everyday}</span>
+            <span class="grow"><div class="title">${esc(rec.note || (catById(rec.categoryId) || { name: "Shop" }).name)}</div>
+              <div class="sub">${esc(dayMonth(rec.date))}${rec.amount > rec.voucher ? ` · <span class="overdue">${esc(fmt(rec.amount - rec.voucher))} over</span>` : ""}</div></span>
+            <span class="amount money">−${esc(fmt(rec.voucher))}</span>${ICONS.chevron}</button>`).join("")}
+    </div>` : ""}
+    <p class="section-footer">One shared voucher card. A shop paid partly by voucher records the rest as overspend from the joint account.</p>`;
+  // The "over" span above is markup we create ourselves; amounts are escaped.
 }
 
 function renderSettings() {
-  const goal = state.settings.savingsGoal;
-  const input = document.getElementById("goalInput");
-  if (document.activeElement !== input) input.value = goal ? fmt(goal) : "";
+  for (const pid of ["p1", "p2"]) {
+    const el = document.getElementById(pid === "p1" ? "nameP1" : "nameP2");
+    if (document.activeElement !== el) el.value = state.settings.people[pid];
+  }
+  const counts = new Map();
+  for (const tx of state.transactions) counts.set(tx.categoryId, (counts.get(tx.categoryId) || 0) + 1);
+  document.getElementById("catList").innerHTML = ["everyday", "bills", "income"].map((g) => `
+    <div class="group" style="--sep-inset: 60px;margin-bottom:12px">
+      ${state.categories.filter((c) => c.group === g).sort((a, b) => a.name.localeCompare(b.name)).map((c) => `
+        <button class="row" data-cat="${esc(c.id)}" aria-label="${esc(c.name)}, ${GROUP_LABEL[g]}, ${counts.get(c.id) || 0} entries. Edit">
+          <span class="badge ${BADGE_CLASS[g]}" aria-hidden="true">${ICONS[g]}</span>
+          <span class="grow title">${esc(c.name)}</span>
+          <span class="trail">${counts.get(c.id) || 0}</span>${ICONS.chevron}
+        </button>`).join("")}
+    </div>`).join("") + `<div class="group"><button class="row action" data-action="addcat"><span class="grow">Add Category…</span></button></div>`;
   let size = 0;
   try { size = (localStorage.getItem(STORAGE_KEY) || "").length; } catch (_) {}
   document.getElementById("storageStats").textContent =
-    `Stored on this device: ${state.transactions.length} transactions and ${state.categories.length} categories, about ${Math.max(1, Math.round(size / 1024))} KB of the roughly 5,000 KB a browser allows.`;
+    `Stored on this device: ${state.transactions.length} entries, ${state.bills.length} bills, ${state.vouchers.length} vouchers, about ${Math.max(1, Math.round(size / 1024))} KB.`;
 }
 
 /* =========================================================================
@@ -818,89 +1093,386 @@ function sheetBar(title, confirmLabel) {
     </div></div>`;
 }
 
-function segmented(name, value) {
-  return `<div class="segmented" role="group" aria-label="Type" data-seg="${name}">
-    ${["expense", "income", "savings"].map((k) => `<button type="button" data-kind="${k}" aria-pressed="${k === value}">${KIND_LABEL[k]}</button>`).join("")}
+
+// A row of buttons where exactly one is chosen (iOS "segmented control").
+function segmented(name, options, value, label) {
+  return `<div class="segmented" role="group" aria-label="${esc(label)}" data-seg="${name}">
+    ${options.map(([v, text]) => `<button type="button" data-val="${esc(v)}" aria-pressed="${v === value}">${esc(text)}</button>`).join("")}
   </div>`;
 }
-
-function categoryOptions(kind, selectedId) {
-  // With nothing chosen yet, preselect the catch-all ("General", "Other income") rather than the first alphabetically.
-  if (!selectedId) selectedId = (state.categories.find((c) => c.kind === kind && /^(general|other)/i.test(c.name)) || {}).id;
-  return state.categories.filter((c) => c.kind === kind).sort((a, b) => a.name.localeCompare(b.name))
-    .map((c) => `<option value="${esc(c.id)}" ${c.id === selectedId ? "selected" : ""}>${esc(c.name)}</option>`).join("");
+function onSegment(name, handler) {
+  const seg = sheet.querySelector(`[data-seg="${name}"]`);
+  seg.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-val]");
+    if (!b) return;
+    for (const x of seg.children) x.setAttribute("aria-pressed", x === b);
+    sheetDirty = true;
+    handler(b.dataset.val);
+  });
 }
 
-// ---- Add / edit a transaction ----
-function openTransactionSheet(txId) {
+function categoryOptions(groups, selectedId) {
+  if (!selectedId) {
+    // Nothing chosen yet: preselect the most sensible default.
+    const pref = groups.includes("income") ? /^paid in/i : groups.includes("everyday") ? /^food/i : /./;
+    selectedId = (state.categories.find((c) => groups.includes(c.group) && pref.test(c.name)) || {}).id;
+  }
+  return groups.map((g) => {
+    const cats = state.categories.filter((c) => c.group === g).sort((a, b) => a.name.localeCompare(b.name));
+    const opts = cats.map((c) => `<option value="${esc(c.id)}" ${c.id === selectedId ? "selected" : ""}>${esc(c.name)}</option>`).join("");
+    return groups.length > 1 ? `<optgroup label="${GROUP_LABEL[g]}">${opts}</optgroup>` : opts;
+  }).join("");
+}
+
+// ---- The split control: 50/50, Custom, or one person only ----
+// Custom shows two £ fields; typing in one fills the other so they always add up.
+function splitControlHTML(split) {
+  const m = (split && split.mode) || "equal";
+  const segVal = m === "amount" || m === "percent" ? "custom" : m;
+  return `
+    <h2 class="section-header">Split</h2>
+    ${segmented("split", [["equal", "50/50"], ["custom", "Custom"], ["p1", personName("p1")], ["p2", personName("p2")]], segVal, "Split")}
+    <div class="group ${segVal === "custom" ? "" : "hidden"}" id="customSplit">
+      <div class="field-row"><label for="shareP1">${esc(personName("p1"))}</label><input id="shareP1" class="money" inputmode="decimal" autocomplete="off" placeholder="£0.00"></div>
+      <div class="field-row"><label for="shareP2">${esc(personName("p2"))}</label><input id="shareP2" class="money" inputmode="decimal" autocomplete="off" placeholder="£0.00"></div>
+    </div>
+    <div class="split-preview" id="splitPreview" aria-live="polite"></div>`;
+}
+
+function wireSplitControl(initial, getAmount) {
+  let split = initial ? { ...initial } : { mode: "equal" };
+  if (split.mode === "percent") split = { mode: "amount", p1: shares({ amount: getAmount() || 0, split }).at(0) };
+  const box = document.getElementById("customSplit");
+  const in1 = document.getElementById("shareP1"), in2 = document.getElementById("shareP2");
+  const preview = () => {
+    const amount = getAmount() || 0;
+    const [a, b] = shares({ amount, split });
+    const pct = amount ? Math.round((a / amount) * 100) : 50;
+    document.getElementById("splitPreview").innerHTML =
+      `<span>${esc(personName("p1"))} <strong>${esc(fmt(a))}</strong></span><span class="muted">${pct}% / ${100 - pct}%</span><span>${esc(personName("p2"))} <strong>${esc(fmt(b))}</strong></span>`;
+  };
+  const fillCustom = () => {
+    const [a, b] = shares({ amount: getAmount() || 0, split });
+    if (document.activeElement !== in1) in1.value = (a / 100).toFixed(2);
+    if (document.activeElement !== in2) in2.value = (b / 100).toFixed(2);
+  };
+  onSegment("split", (v) => {
+    if (v === "custom") {
+      split = { mode: "amount", p1: shares({ amount: getAmount() || 0, split }).at(0) };
+      box.classList.remove("hidden");
+      fillCustom();
+    } else {
+      split = { mode: v };
+      box.classList.add("hidden");
+    }
+    preview();
+  });
+  in1.addEventListener("input", () => {
+    const p = parsePence(in1.value);
+    if (p == null) return;
+    split = { mode: "amount", p1: p };
+    fillCustom(); preview();
+  });
+  in2.addEventListener("input", () => {
+    const p = parsePence(in2.value);
+    if (p == null) return;
+    split = { mode: "amount", p1: (getAmount() || 0) - p };
+    fillCustom(); preview();
+  });
+  if (split.mode === "amount") fillCustom();
+  preview();
+  return {
+    get: () => (split.mode === "amount" && split.p1 === Math.round((getAmount() || 0) / 2) ? { mode: "equal" } : { ...split }),
+    refresh: () => { if (split.mode === "amount") fillCustom(); preview(); },
+  };
+}
+
+// ---- Add / edit an expense or money paid in ----
+// opts: { billId, amount, categoryId, date, split } to prefill (used by bills)
+function openTransactionSheet(txId, opts = {}) {
   const tx = txId ? state.transactions.find((t) => t.id === txId) : null;
-  let kind = tx ? kindOf(tx) : "expense";
-  const date = tx ? tx.date : (monthOf(todayISO()) === currentMonth ? todayISO() : currentMonth + "-01");
+  let kind = tx ? (isIncome(tx) ? "income" : "expense") : "expense";
+  const billId = tx ? tx.billId : opts.billId;
+  const bill = billId ? state.bills.find((b) => b.id === billId) : null;
+  const vs = voucherSummary();
+  const showVoucher = kind === "expense" && (vs.balance > 0 || (tx && tx.voucher));
+  const amountVal = tx ? tx.amount : opts.amount;
+  const date = tx ? tx.date : opts.date || todayISO();
+  const title = tx ? (kind === "income" ? "Edit Payment In" : "Edit Expense") : bill ? `Pay ${bill.name}` : "New Expense";
+
   openSheet(`
-    ${sheetBar(tx ? "Edit Transaction" : "New Transaction", tx ? "Done" : "Add")}
+    ${sheetBar(title, tx ? "Done" : bill ? "Mark Paid" : "Add")}
     <div class="amount-field">
       <span aria-hidden="true">£</span>
       <input id="txAmount" class="money" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="0.00"
-        aria-label="Amount in pounds" value="${tx ? esc((tx.amount / 100).toFixed(2)) : ""}">
+        aria-label="Amount in pounds" value="${amountVal != null ? esc((amountVal / 100).toFixed(2)) : ""}">
     </div>
-    ${segmented("txKind", kind)}
-    <div class="group">
-      <div class="field-row"><label for="txCategory">Category</label><select id="txCategory">${categoryOptions(kind, tx && tx.categoryId)}</select></div>
-      <div class="field-row"><label for="txDate">Date</label><input id="txDate" type="date" value="${esc(date)}" required></div>
-      <div class="field-row"><label for="txNote">Note</label><input id="txNote" maxlength="200" placeholder="Optional" autocomplete="off" value="${tx ? esc(tx.note) : ""}"></div>
+    ${bill || tx ? "" : segmented("kind", [["expense", "Expense"], ["income", "Paid In"]], kind, "Type")}
+    <div id="expenseFields" class="${kind === "income" ? "hidden" : ""}">
+      <div class="group">
+        <div class="field-row"><label for="txCategory">Category</label><select id="txCategory">${categoryOptions(["everyday", "bills"], (tx && !isIncome(tx) && tx.categoryId) || opts.categoryId)}</select></div>
+        <div class="field-row"><label for="txDate">Date</label><input id="txDate" type="date" value="${esc(date)}" required></div>
+        <div class="field-row"><label for="txNote">Note</label><input id="txNote" maxlength="200" placeholder="Optional" autocomplete="off" value="${tx ? esc(tx.note || "") : ""}"></div>
+        ${showVoucher ? `<div class="field-row"><label for="txVoucher">From voucher</label><input id="txVoucher" class="money" inputmode="decimal" autocomplete="off" placeholder="£0.00" value="${tx && tx.voucher ? esc((tx.voucher / 100).toFixed(2)) : ""}"></div>` : ""}
+      </div>
+      ${showVoucher ? `<p class="section-footer">Voucher balance ${esc(fmt(vs.balance + ((tx && tx.voucher) || 0)))}. The rest comes from the joint account.</p>` : ""}
+      ${splitControlHTML((tx && tx.split) || opts.split)}
     </div>
-    <p class="section-footer">For a refund, choose Spending and type a minus sign, for example −12.99.${tx && addedByOther(tx) ? ` Added by ${esc(tx.by)}.` : ""}</p>
-    ${tx ? `<div class="group" style="margin-top:24px"><button class="row destructive" data-sheet="delete">Delete Transaction</button></div>` : ""}
+    <div id="incomeFields" class="${kind === "income" ? "" : "hidden"}">
+      <h2 class="section-header">From</h2>
+      ${segmented("from", [["p1", personName("p1")], ["p2", personName("p2")], ["other", "Other"]], (tx && tx.from) || (sync && sync.me) || "p1", "Paid in by")}
+      <div class="group">
+        <div class="field-row"><label for="inCategory">Category</label><select id="inCategory">${categoryOptions(["income"], tx && isIncome(tx) ? tx.categoryId : null)}</select></div>
+        <div class="field-row"><label for="inDate">Date</label><input id="inDate" type="date" value="${esc(date)}" required></div>
+        <div class="field-row"><label for="inNote">Note</label><input id="inNote" maxlength="200" placeholder="Optional" autocomplete="off" value="${tx && isIncome(tx) ? esc(tx.note || "") : ""}"></div>
+      </div>
+      <p class="section-footer">Money paid into the joint account. Home compares what each of you paid in with your share of spending.</p>
+    </div>
+    ${bill ? `<p class="section-footer">Payment for the bill “${esc(bill.name)}”.</p>` : ""}
+    ${tx && addedByOther(tx) ? `<p class="section-footer">Added by ${esc(personName(tx.by))}.</p>` : ""}
+    ${tx ? `<div class="group" style="margin-top:24px"><button class="row destructive" data-sheet="delete">Delete</button></div>` : ""}
   `, () => {
     const amountEl = document.getElementById("txAmount");
     const confirmBtn = sheet.querySelector('[data-sheet="confirm"]');
+    const splitCtl = wireSplitControl((tx && tx.split) || opts.split, () => parsePence(amountEl.value));
+    let from = (tx && tx.from) || (sync && sync.me) || "p1";
     const validate = () => { const p = parsePence(amountEl.value); confirmBtn.disabled = p == null || p === 0; };
-    amountEl.addEventListener("input", validate);
+    amountEl.addEventListener("input", () => { validate(); splitCtl.refresh(); });
     validate();
     if (!tx) amountEl.focus();
-
-    sheet.querySelector('[data-seg="txKind"]').addEventListener("click", (e) => {
-      const b = e.target.closest("button[data-kind]");
-      if (!b) return;
-      kind = b.dataset.kind;
-      for (const x of b.parentElement.children) x.setAttribute("aria-pressed", x === b);
-      document.getElementById("txCategory").innerHTML = categoryOptions(kind);
-      sheetDirty = true;
+    if (!bill && !tx) onSegment("kind", (v) => {
+      kind = v;
+      document.getElementById("expenseFields").classList.toggle("hidden", v !== "expense");
+      document.getElementById("incomeFields").classList.toggle("hidden", v !== "income");
+      document.getElementById("sheetTitle").textContent = v === "income" ? "Money Paid In" : "New Expense";
     });
+    onSegment("from", (v) => { from = v; });
 
     sheet.onclick = (e) => {
       const act = e.target.closest("[data-sheet]");
       if (!act) return;
       if (act.dataset.sheet === "cancel") return closeSheet();
       if (act.dataset.sheet === "delete") {
-        if (!confirm("Delete this transaction?")) return;
+        if (!confirm("Delete this entry?")) return;
         state.transactions = state.transactions.filter((t) => t.id !== tx.id);
         tombstone("tx", tx.id);
         save(); closeSheet(true); renderAll();
         return;
       }
       const amount = parsePence(amountEl.value);
-      const dateVal = document.getElementById("txDate").value;
-      if (amount == null || amount === 0 || !dateVal) return;
-      const data = {
-        date: dateVal, amount,
-        categoryId: document.getElementById("txCategory").value,
-        note: document.getElementById("txNote").value.trim(),
-      };
-      if (tx) touch(Object.assign(tx, data));
-      else state.transactions.push(touch({ id: newId(), ...data, ...(sync ? { by: sync.name } : {}) }));
+      if (amount == null || amount === 0) return;
+      let data;
+      if (kind === "income") {
+        const dateVal = document.getElementById("inDate").value;
+        if (!dateVal) return;
+        data = { date: dateVal, amount, categoryId: document.getElementById("inCategory").value,
+          note: document.getElementById("inNote").value.trim(), from };
+      } else {
+        const dateVal = document.getElementById("txDate").value;
+        if (!dateVal) return;
+        const vEl = document.getElementById("txVoucher");
+        let voucher = vEl ? parsePence(vEl.value) || 0 : 0;
+        voucher = Math.max(0, Math.min(voucher, amount));
+        data = { date: dateVal, amount, categoryId: document.getElementById("txCategory").value,
+          note: document.getElementById("txNote").value.trim(), split: splitCtl.get() };
+        if (voucher) data.voucher = voucher;
+        if (billId) data.billId = billId;
+      }
+      if (tx) {
+        for (const k of ["split", "from", "voucher"]) delete tx[k];
+        touch(Object.assign(tx, data));
+      } else {
+        state.transactions.push(touch({ id: newId(), ...data, ...(sync ? { by: sync.me } : {}) }));
+      }
       save();
-      currentMonth = monthOf(dateVal);
+      showDate(data.date);
       closeSheet(true);
       renderAll();
     };
   });
 }
 
+// After saving, make sure the new entry is on screen, without moving the view if it already is.
+function showDate(date) {
+  if (currentTab === "bills") { month = monthOf(date); return; }
+  if (!inPeriod(date, period())) { week = weekOf(date); month = monthOf(date); }
+}
+
+// ---- Log Shop: the quick way to record a shop paid (partly) with the voucher ----
+function openLogShopSheet() {
+  const vs = voucherSummary();
+  let how = "total";
+  openSheet(`
+    ${sheetBar("Log Shop", "Log")}
+    ${segmented("how", [["total", "Shop total"], ["over", "Just the overspend"]], how, "What are you entering")}
+    <div class="amount-field">
+      <span aria-hidden="true">£</span>
+      <input id="shopAmount" class="money" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="0.00" aria-label="Amount in pounds">
+    </div>
+    <div class="group">
+      <div class="row"><span class="grow">Voucher balance</span><span class="trail money">${esc(fmt(Math.max(0, vs.balance)))}</span></div>
+      <div class="row"><span class="grow">From voucher</span><span class="trail money" id="shopVoucher">£0.00</span></div>
+      <div class="row"><span class="grow"><strong>Over (joint account)</strong></span><span class="trail money" id="shopOver" style="font-weight:600">£0.00</span></div>
+    </div>
+    <p class="section-footer" id="shopHint"></p>
+    <div class="group" style="margin-top:12px">
+      <div class="field-row"><label for="shopCategory">Category</label><select id="shopCategory">${categoryOptions(["everyday"])}</select></div>
+      <div class="field-row"><label for="shopDate">Date</label><input id="shopDate" type="date" value="${esc(todayISO())}"></div>
+      <div class="field-row"><label for="shopNote">Note</label><input id="shopNote" maxlength="200" placeholder="e.g. Tesco" autocomplete="off"></div>
+    </div>
+    ${splitControlHTML({ mode: "equal" })}
+  `, () => {
+    const amountEl = document.getElementById("shopAmount");
+    const confirmBtn = sheet.querySelector('[data-sheet="confirm"]');
+    const balance = Math.max(0, vs.balance);
+    // Work out the full shop: total, how much the voucher covered, and the overspend.
+    const calc = () => {
+      const entered = parsePence(amountEl.value);
+      if (entered == null || entered <= 0) return null;
+      if (how === "total") { const voucher = Math.min(balance, entered); return { total: entered, voucher, over: entered - voucher }; }
+      return { total: balance + entered, voucher: balance, over: entered };
+    };
+    const splitCtl = wireSplitControl({ mode: "equal" }, () => (calc() || { total: 0 }).total);
+    const update = () => {
+      const c = calc();
+      document.getElementById("shopVoucher").textContent = fmt(c ? c.voucher : 0);
+      document.getElementById("shopOver").textContent = fmt(c ? c.over : 0);
+      document.getElementById("shopHint").textContent = how === "total"
+        ? "Type the receipt total. The voucher pays what it can; the rest is recorded as overspend."
+        : `Type only what you paid on top. The voucher is assumed used up (${fmt(balance)}), so the shop total is that plus the overspend.`;
+      confirmBtn.disabled = !c;
+      splitCtl.refresh();
+    };
+    onSegment("how", (v) => { how = v; update(); });
+    amountEl.addEventListener("input", update);
+    update();
+    amountEl.focus();
+    sheet.onclick = (e) => {
+      const act = e.target.closest("[data-sheet]");
+      if (!act) return;
+      if (act.dataset.sheet === "cancel") return closeSheet();
+      const c = calc();
+      if (!c) return;
+      const date = document.getElementById("shopDate").value || todayISO();
+      const tx = { id: newId(), date, amount: c.total, categoryId: document.getElementById("shopCategory").value,
+        note: document.getElementById("shopNote").value.trim(), split: splitCtl.get(), ...(sync ? { by: sync.me } : {}) };
+      if (c.voucher) tx.voucher = c.voucher;
+      state.transactions.push(touch(tx));
+      save();
+      showDate(date);
+      closeSheet(true);
+      renderAll();
+    };
+  });
+}
+
+// ---- Add / edit a voucher card purchase ----
+function openVoucherSheet(id) {
+  const v = id ? state.vouchers.find((x) => x.id === id) : null;
+  openSheet(`
+    ${sheetBar(v ? "Edit Voucher" : "Add Voucher", v ? "Done" : "Add")}
+    <div class="group" style="margin-top:12px">
+      <div class="field-row"><label for="vValue">Voucher value</label><input id="vValue" class="money" inputmode="decimal" placeholder="£100.00" autocomplete="off" value="${v ? esc((v.value / 100).toFixed(2)) : ""}"></div>
+      <div class="field-row"><label for="vCost">You paid</label><input id="vCost" class="money" inputmode="decimal" placeholder="£95.00" autocomplete="off" value="${v ? esc((v.cost / 100).toFixed(2)) : ""}"></div>
+      <div class="field-row"><label for="vDate">Date</label><input id="vDate" type="date" value="${esc(v ? v.date : todayISO())}"></div>
+      <div class="field-row"><label for="vNote">Note</label><input id="vNote" maxlength="100" placeholder="e.g. Tesco gift card" autocomplete="off" value="${v ? esc(v.note || "") : ""}"></div>
+    </div>
+    <p class="section-footer" id="vSaved" aria-live="polite"></p>
+    ${v ? `<div class="group" style="margin-top:24px"><button class="row destructive" data-sheet="delete">Delete Voucher</button></div>` : ""}
+  `, () => {
+    const valEl = document.getElementById("vValue"), costEl = document.getElementById("vCost");
+    const confirmBtn = sheet.querySelector('[data-sheet="confirm"]');
+    const update = () => {
+      const val = parsePence(valEl.value), cost = costEl.value.trim() === "" ? val : parsePence(costEl.value);
+      const ok = val != null && val > 0 && cost != null && cost >= 0;
+      confirmBtn.disabled = !ok;
+      document.getElementById("vSaved").textContent = ok && val > cost ? `You save ${fmt(val - cost)} (${Math.round(((val - cost) / val) * 100)}% off).` : "";
+    };
+    sheet.oninput = update;
+    update();
+    if (!v) valEl.focus();
+    sheet.onclick = (e) => {
+      const act = e.target.closest("[data-sheet]");
+      if (!act) return;
+      if (act.dataset.sheet === "cancel") return closeSheet();
+      if (act.dataset.sheet === "delete") {
+        if (!confirm("Delete this voucher? The balance will go down by its value.")) return;
+        state.vouchers = state.vouchers.filter((x) => x.id !== v.id);
+        tombstone("vch", v.id);
+        save(); closeSheet(true); renderAll();
+        return;
+      }
+      const value = parsePence(valEl.value);
+      const cost = costEl.value.trim() === "" ? value : parsePence(costEl.value);
+      if (value == null || value <= 0 || cost == null || cost < 0) return;
+      const data = { date: document.getElementById("vDate").value || todayISO(), value, cost, note: document.getElementById("vNote").value.trim() };
+      if (v) touch(Object.assign(v, data)); else state.vouchers.push(touch({ id: newId(), ...data }));
+      save(); closeSheet(true); renderAll();
+    };
+  });
+}
+
+// ---- Add / edit a monthly bill ----
+function openBillSheet(id) {
+  const bill = id ? state.bills.find((b) => b.id === id) : null;
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+  openSheet(`
+    ${sheetBar(bill ? "Edit Bill" : "New Bill", bill ? "Done" : "Add")}
+    <div class="group" style="margin-top:12px">
+      <div class="field-row"><label for="bName">Name</label><input id="bName" maxlength="40" placeholder="e.g. Rent" autocomplete="off" value="${bill ? esc(bill.name) : ""}"></div>
+      <div class="field-row"><label for="bAmount">Usual amount</label><input id="bAmount" class="money" inputmode="decimal" placeholder="£0.00" autocomplete="off" value="${bill ? esc((bill.amount / 100).toFixed(2)) : ""}"></div>
+      <div class="field-row"><label for="bDue">Due on</label><select id="bDue">${days.map((d) => `<option value="${d}" ${(bill ? bill.dueDay : 1) === d ? "selected" : ""}>${ordinal(d)} of the month</option>`).join("")}</select></div>
+      <div class="field-row"><label for="bCategory">Category</label><select id="bCategory">${categoryOptions(["bills"], bill && bill.categoryId)}</select></div>
+    </div>
+    ${splitControlHTML(bill && bill.split)}
+    ${bill ? `<p class="section-footer">Past payments stay in Activity if you delete this bill.</p>
+      <div class="group" style="margin-top:24px"><button class="row destructive" data-sheet="delete">Delete Bill</button></div>` : ""}
+  `, () => {
+    const nameEl = document.getElementById("bName"), amtEl = document.getElementById("bAmount");
+    const confirmBtn = sheet.querySelector('[data-sheet="confirm"]');
+    const splitCtl = wireSplitControl(bill && bill.split, () => parsePence(amtEl.value));
+    const validate = () => { const a = parsePence(amtEl.value); confirmBtn.disabled = !nameEl.value.trim() || a == null || a <= 0; };
+    nameEl.addEventListener("input", validate);
+    amtEl.addEventListener("input", () => { validate(); splitCtl.refresh(); });
+    validate();
+    if (!bill) nameEl.focus();
+    // Picking a category fills in the name if it's still empty.
+    document.getElementById("bCategory").addEventListener("change", (e) => {
+      if (!nameEl.value.trim()) { nameEl.value = (catById(e.target.value) || {}).name || ""; validate(); }
+    });
+    sheet.onclick = (e) => {
+      const act = e.target.closest("[data-sheet]");
+      if (!act) return;
+      if (act.dataset.sheet === "cancel") return closeSheet();
+      if (act.dataset.sheet === "delete") {
+        if (!confirm(`Delete the bill "${bill.name}"?`)) return;
+        state.bills = state.bills.filter((b) => b.id !== bill.id);
+        tombstone("bill", bill.id);
+        save(); closeSheet(true); renderAll();
+        return;
+      }
+      const amount = parsePence(amtEl.value);
+      if (!nameEl.value.trim() || amount == null || amount <= 0) return;
+      const data = { name: nameEl.value.trim(), amount, dueDay: Number(document.getElementById("bDue").value),
+        categoryId: document.getElementById("bCategory").value, split: splitCtl.get() };
+      if (bill) touch(Object.assign(bill, data)); else state.bills.push(touch({ id: newId(), ...data }));
+      save(); closeSheet(true); renderAll();
+    };
+  });
+}
+
+function payBill(id) {
+  const bill = state.bills.find((b) => b.id === id);
+  if (!bill) return;
+  const due = `${month}-${pad(Math.min(bill.dueDay, daysInMonth(month)))}`;
+  const date = month === monthOf(todayISO()) && due > todayISO() ? todayISO() : due;
+  openTransactionSheet(null, { billId: bill.id, amount: bill.amount, categoryId: bill.categoryId, split: bill.split, date });
+}
+
 // ---- Add / edit a category ----
 function openCategorySheet(catId) {
   const cat = catId ? catById(catId) : null;
-  let kind = cat ? cat.kind : "expense";
+  let group = cat ? cat.group : "everyday";
   const used = cat ? state.transactions.filter((t) => t.categoryId === cat.id).length : 0;
   openSheet(`
     ${sheetBar(cat ? "Edit Category" : "New Category", cat ? "Done" : "Add")}
@@ -908,8 +1480,9 @@ function openCategorySheet(catId) {
       <div class="field-row"><label for="catName">Name</label><input id="catName" maxlength="40" placeholder="e.g. Coffee" autocomplete="off" value="${cat ? esc(cat.name) : ""}"></div>
     </div>
     <h2 class="section-header">Type</h2>
-    ${segmented("catKind", kind)}
-    ${cat ? `<p class="section-footer" style="margin-top:-10px">${used} transaction${used === 1 ? "" : "s"} use this category.</p>
+    ${segmented("group", [["everyday", "Everyday"], ["bills", "Bill"], ["income", "Paid in"]], group, "Type")}
+    <p class="section-footer">Everyday spending shows in the weekly view; bills are monthly; “Paid in” is money into the joint account.</p>
+    ${cat ? `<p class="section-footer">${used} entr${used === 1 ? "y uses" : "ies use"} this category.</p>
       <div class="group" style="margin-top:24px"><button class="row destructive" data-sheet="delete">Delete Category</button></div>` : ""}
   `, () => {
     const nameEl = document.getElementById("catName");
@@ -918,26 +1491,19 @@ function openCategorySheet(catId) {
     nameEl.addEventListener("input", validate);
     validate();
     if (!cat) nameEl.focus();
-
-    sheet.querySelector('[data-seg="catKind"]').addEventListener("click", (e) => {
-      const b = e.target.closest("button[data-kind]");
-      if (!b) return;
-      kind = b.dataset.kind;
-      for (const x of b.parentElement.children) x.setAttribute("aria-pressed", x === b);
-      sheetDirty = true;
-    });
-
+    onSegment("group", (v) => { group = v; });
+    const lastOfGroup = (g) => state.categories.filter((c) => c.group === g).length === 1;
     sheet.onclick = (e) => {
       const act = e.target.closest("[data-sheet]");
       if (!act) return;
       if (act.dataset.sheet === "cancel") return closeSheet();
-      const lastOfKind = (k) => state.categories.filter((c) => c.kind === k).length === 1;
       if (act.dataset.sheet === "delete") {
-        const siblings = state.categories.filter((c) => c.kind === cat.kind && c.id !== cat.id);
+        const siblings = state.categories.filter((c) => c.group === cat.group && c.id !== cat.id);
         if (!siblings.length) { alert("Keep at least one category of each type."); return; }
-        const target = siblings.find((c) => /^(general|other)/i.test(c.name)) || siblings[0];
-        if (!confirm(used ? `Delete "${cat.name}"? Its ${used} transactions will move to "${target.name}".` : `Delete "${cat.name}"?`)) return;
+        const target = siblings.find((c) => /^(other|paid in)/i.test(c.name)) || siblings[0];
+        if (!confirm(used ? `Delete "${cat.name}"? Its ${used} entries will move to "${target.name}".` : `Delete "${cat.name}"?`)) return;
         for (const t of state.transactions) if (t.categoryId === cat.id) { t.categoryId = target.id; touch(t); }
+        for (const b of state.bills) if (b.categoryId === cat.id) { b.categoryId = target.id; touch(b); }
         state.categories = state.categories.filter((c) => c.id !== cat.id);
         tombstone("cat", cat.id);
         save(); closeSheet(true); renderAll();
@@ -945,13 +1511,13 @@ function openCategorySheet(catId) {
       }
       const name = nameEl.value.trim();
       if (!name) return;
-      const clash = state.categories.some((c) => c.id !== catId && c.kind === kind && c.name.toLowerCase() === name.toLowerCase());
-      if (clash) { alert("That category already exists."); return; }
+      if (state.categories.some((c) => c.id !== catId && c.name.toLowerCase() === name.toLowerCase())) { alert("That category already exists."); return; }
       if (cat) {
-        if (cat.kind !== kind && lastOfKind(cat.kind)) { alert("Keep at least one category of each type."); return; }
-        cat.name = name; cat.kind = kind; touch(cat);
+        if (cat.group !== group && lastOfGroup(cat.group)) { alert("Keep at least one category of each type."); return; }
+        if ((cat.group === "income") !== (group === "income") && used) { alert("This category is in use, so it can't switch between spending and money paid in."); return; }
+        cat.name = name; cat.group = group; touch(cat);
       } else {
-        state.categories.push(touch({ id: newId(), name, kind }));
+        state.categories.push(touch({ id: newId(), name, group }));
       }
       save(); closeSheet(true); renderAll();
     };
@@ -1006,13 +1572,36 @@ function attachTip(el, lines) {
   el.addEventListener("blur", hideTip);
 }
 
+function truncate(s, px) {
+  const maxChars = Math.floor(px / 7);
+  return s.length > maxChars ? s.slice(0, maxChars - 1) + "…" : s;
+}
+
+// Round an axis step to 1, 2 or 5 × a power of ten, so labels look like £500, not £437.
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const n = raw / p;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+}
+
+
+function drawHomeCharts() {
+  drawCategoryChart();
+  drawTrendChart();
+}
+
 function drawCategoryChart() {
   const box = document.getElementById("catChart");
-  const rows = spendingByCategory(currentMonth);
+  const p = period();
+  const t = periodTotals(p);
+  const rows = [...t.byCategory]
+    .map(([id, amount]) => ({ name: (catById(id) || { name: "Unknown" }).name, group: (catById(id) || {}).group, amount }))
+    .filter((r) => r.amount > 0 && (p.type === "month" || r.group !== "bills"))
+    .sort((a, b) => b.amount - a.amount);
   box.replaceChildren();
-  if (!rows.length) { box.innerHTML = '<div class="empty">No spending recorded for this month yet.</div>'; return; }
+  if (!rows.length) { box.innerHTML = `<div class="empty">No spending ${p.type === "week" ? "this week" : "this month"} yet.</div>`; return; }
   const total = rows.reduce((s, r) => s + r.amount, 0);
-  const W = Math.max(280, box.clientWidth), rowH = 30, labelW = Math.min(130, W * 0.32), valueW = 108;
+  const W = Math.max(280, box.clientWidth), rowH = 30, labelW = Math.min(120, W * 0.32), valueW = 108;
   const H = rows.length * rowH;
   const plotW = W - labelW - valueW;
   const max = rows[0].amount;
@@ -1024,270 +1613,87 @@ function drawCategoryChart() {
     const pct = Math.round((r.amount / total) * 100);
     svg.append(svgEl("text", { x: labelW - 8, y: y + rowH / 2 + 4, "text-anchor": "end" }, truncate(r.name, labelW)));
     const hit = svgEl("rect", { class: "hit", x: 0, y, width: W, height: rowH, "aria-label": `${r.name}: ${fmt(r.amount)}, ${pct}%` });
-    attachTip(hit, [{ value: fmt(r.amount), label: `${r.name} · ${pct}% of spending` }]);
+    attachTip(hit, [{ value: fmt(r.amount), label: `${r.name} · ${pct}%` }]);
     svg.append(hit);
-    svg.append(svgEl("path", { class: "bar", d: barPath(labelW, by, w, barH, 4, true), fill: "var(--series-in)", "pointer-events": "none" }));
+    svg.append(svgEl("path", { d: barPath(labelW, by, w, barH, 4, true), fill: "var(--series-in)", "pointer-events": "none" }));
     svg.append(svgEl("text", { class: "value-label", x: labelW + w + 6, y: y + rowH / 2 + 4, "pointer-events": "none" }, `${fmt(r.amount)}  ${pct}%`));
   });
   box.append(svg);
-  const foot = document.createElement("p");
-  foot.className = "small muted";
-  foot.style.margin = "8px 0 0";
-  // Categories whose refunds outweighed spending can't be drawn as a bar, so say so —
-  // the footer must match the "Money out" tile.
-  const out = monthTotals(currentMonth).out;
-  foot.textContent = "Total spending: " + fmt(out) + (out !== total ? ` (includes ${fmt(total - out)} of refunds not shown above)` : "");
-  box.append(foot);
 }
 
-function truncate(s, px) {
-  const maxChars = Math.floor(px / 7);
-  return s.length > maxChars ? s.slice(0, maxChars - 1) + "…" : s;
-}
-
+// One bar per week (last 8) or month (last 6): total joint spending, with the current one highlighted.
 function drawTrendChart() {
   const box = document.getElementById("trendChart");
   box.replaceChildren();
-  const months = [];
-  for (let i = 5; i >= 0; i--) months.push(addMonths(currentMonth, -i));
-  const data = months.map((m) => ({ m, ...monthTotals(m) }));
-  const max = Math.max(...data.map((d) => Math.max(d.in, d.out)));
-  if (max <= 0) { box.innerHTML = '<div class="empty">Nothing recorded in the last six months yet.</div>'; return; }
-
-  const W = Math.max(280, box.clientWidth), H = 220, padL = 44, padB = 24, padT = 8;
+  const p = period();
+  const n = p.type === "week" ? 8 : 6;
+  document.getElementById("trendTitle").textContent = p.type === "week" ? "Last 8 weeks · everyday" : "Last 6 months";
+  const data = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const q = shiftPeriod(p, -i);
+    const t = periodTotals(q);
+    data.push({ q, value: q.type === "week" ? t.everyday : t.spent, t });
+  }
+  const max = Math.max(...data.map((d) => d.value));
+  if (max <= 0) { box.innerHTML = '<div class="empty">Nothing recorded yet.</div>'; return; }
+  const W = Math.max(280, box.clientWidth), H = 200, padL = 44, padB = 24, padT = 8;
   const plotW = W - padL, plotH = H - padB - padT;
   const step = niceStep(max / 4), top = Math.ceil(max / step) * step;
   const yOf = (v) => padT + plotH - (Math.max(0, v) / top) * plotH;
+  const label = (q) => q.type === "week" ? dayMonth(q.start).replace(" ", " ") : monthName(q.key, "short");
   const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img",
-    "aria-label": "Money in and out per month: " + data.map((d) => `${monthName(d.m, "short")} in ${fmt(d.in)}, out ${fmt(d.out)}`).join("; ") });
-
+    "aria-label": "Spending per " + p.type + ": " + data.map((d) => `${periodLabel(d.q)} ${fmt(d.value)}`).join("; ") });
   for (let v = 0; v <= top; v += step) {
     svg.append(svgEl("line", { x1: padL, x2: W, y1: yOf(v), y2: yOf(v), stroke: "var(--grid)", "stroke-width": 1 }));
     svg.append(svgEl("text", { x: padL - 6, y: yOf(v) + 4, "text-anchor": "end" }, fmtShort(v)));
   }
-  const groupW = plotW / data.length, barW = Math.min(22, (groupW * 0.6) / 2);
+  const groupW = plotW / data.length, barW = Math.min(26, groupW * 0.55);
   data.forEach((d, i) => {
     const gx = padL + i * groupW, cx = gx + groupW / 2;
-    const hit = svgEl("rect", { class: "hit", x: gx, y: padT, width: groupW, height: plotH + padB,
-      "aria-label": `${monthName(d.m)}: in ${fmt(d.in)}, out ${fmt(d.out)}` });
+    const current = i === data.length - 1;
+    const hit = svgEl("rect", { class: "hit", x: gx, y: padT, width: groupW, height: plotH + padB, "aria-label": `${periodLabel(d.q)}: ${fmt(d.value)}` });
+    const [a, b] = d.q.type === "week" ? sharesOf(d.q, "everyday") : d.t.share;
     attachTip(hit, [
-      { value: monthName(d.m) },
-      { value: fmt(d.in), label: "in", color: "var(--series-in)" },
-      { value: fmt(d.out), label: "out", color: "var(--series-out)" },
-      { value: (d.net >= 0 ? "+" : "") + fmt(d.net), label: "net" },
-      ...(d.saved ? [{ value: fmt(d.saved), label: "saved" }] : []),
+      { value: periodLabel(d.q) },
+      { value: fmt(d.value), label: "spent" },
+      { value: fmt(a), label: personName("p1"), color: "var(--series-in)" },
+      { value: fmt(b), label: personName("p2"), color: "var(--series-out)" },
     ]);
     svg.append(hit);
-    [[d.in, "var(--series-in)", cx - barW - 1], [d.out, "var(--series-out)", cx + 1]].forEach(([v, color, x]) => {
-      if (v <= 0) return;
-      const y = yOf(v), h = padT + plotH - y;
-      svg.append(svgEl("path", { d: barPath(x, y, barW, h, 4, false), fill: color, "pointer-events": "none" }));
-    });
-    const lbl = svgEl("text", { x: cx, y: H - 6, "text-anchor": "middle" }, monthName(d.m, "short"));
-    if (d.m === currentMonth) lbl.setAttribute("style", "fill: var(--text); font-weight: 600");
+    if (d.value > 0) {
+      const y = yOf(d.value), h = padT + plotH - y;
+      svg.append(svgEl("path", { d: barPath(cx - barW / 2, y, barW, h, 4, false), fill: current ? "var(--series-in)" : "var(--fill-2)", "pointer-events": "none" }));
+    }
+    const lbl = svgEl("text", { x: cx, y: H - 6, "text-anchor": "middle" }, data.length > 6 && W < 360 && i % 2 ? "" : label(d.q));
+    if (current) lbl.setAttribute("style", "fill: var(--label); font-weight: 600");
     svg.append(lbl);
   });
-  svg.append(svgEl("line", { x1: padL, x2: W, y1: padT + plotH, y2: padT + plotH, stroke: "var(--border)", "stroke-width": 1 }));
+  svg.append(svgEl("line", { x1: padL, x2: W, y1: padT + plotH, y2: padT + plotH, stroke: "var(--sep)", "stroke-width": 1 }));
   box.append(svg);
 }
 
-// Round an axis step to 1, 2 or 5 × a power of ten, so labels look like £500, not £437.
-function niceStep(raw) {
-  const p = Math.pow(10, Math.floor(Math.log10(raw)));
-  const n = raw / p;
-  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
-}
-
 let resizeTimer;
-window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { drawCategoryChart(); drawTrendChart(); }, 150); });
-
-/* =========================================================================
-   6. CSV IMPORT
-   ========================================================================= */
-
-// Turn CSV text into rows of fields. Handles quoted fields that contain commas,
-// quotes ("") or line breaks — splitting on "," alone would break on those.
-function parseCSV(text) {
-  text = text.replace(/^﻿/, "");   // strip the invisible "byte order mark" some exports start with
-  const rows = [];
-  let row = [], field = "", inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
-      else if (c === '"') inQuotes = false;
-      else field += c;
-    } else if (c === '"') inQuotes = true;
-    else if (c === ",") { row.push(field); field = ""; }
-    else if (c === "\n" || c === "\r") {
-      if (c === "\r" && text[i + 1] === "\n") i++;
-      row.push(field); rows.push(row); row = []; field = "";
-    } else field += c;
-  }
-  if (field !== "" || row.length) { row.push(field); rows.push(row); }
-  return rows.filter((r) => r.some((f) => f.trim() !== ""));
-}
-
-// Accepts 31/01/2026 (UK, as Monzo uses) or 2026-01-31. Returns "YYYY-MM-DD" or null.
-function parseDate(s) {
-  s = String(s).trim();
-  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
-  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
-  if (m) {
-    const y = m[3].length === 2 ? "20" + m[3] : m[3];
-    return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
-  }
-  return null;
-}
-
-// Monzo uses names like "eating_out"; turn them into "Eating out".
-const prettyName = (s) => { s = s.replace(/_/g, " ").trim(); return s.charAt(0).toUpperCase() + s.slice(1); };
-
-const MONZO_REQUIRED = ["Transaction ID", "Date", "Type", "Name", "Category", "Amount"];
-
-let pendingImport = null;
-
-document.getElementById("csvFile").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const rows = parseCSV(await file.text());   // read locally by the browser, never uploaded
-  e.target.value = "";
-  if (rows.length < 2) return showImportError("That file doesn't seem to contain any rows.");
-  const header = rows[0].map((h) => h.trim());
-  const isMonzo = MONZO_REQUIRED.every((h) => header.includes(h));
-  if (isMonzo) {
-    const col = Object.fromEntries(header.map((h, i) => [h, i]));
-    prepareImport(rows.slice(1).map((r) => ({
-      importId: "monzo:" + r[col["Transaction ID"]],
-      date: parseDate(r[col["Date"]]),
-      amount: parsePence(r[col["Amount"]]),
-      category: r[col["Category"]] || "",
-      isPot: /pot transfer/i.test(r[col["Type"]] || ""),
-      note: [r[col["Name"]], col["Notes and #tags"] != null ? r[col["Notes and #tags"]] : ""].filter((s) => s && s.trim()).join(" — "),
-    })), "Monzo export detected — columns were matched automatically.");
-  } else {
-    showMappingForm(header, rows.slice(1));
-  }
-});
-
-// Fallback for other banks: let the user say which column is which.
-function showMappingForm(header, body) {
-  const box = document.getElementById("importMapping");
-  const guess = (re) => header.findIndex((h) => re.test(h));
-  const opts = (sel, optional) => (optional ? '<option value="-1">(none)</option>' : "") +
-    header.map((h, i) => `<option value="${i}" ${i === sel ? "selected" : ""}>${esc(h || "Column " + (i + 1))}</option>`).join("");
-  box.innerHTML = `
-    <div class="notice">This doesn't look like a Monzo export. Tell me which column is which:</div>
-    <div class="form-row">
-      <label class="field">Date<select id="mapDate">${opts(guess(/date/i))}</select></label>
-      <label class="field">Amount (negative = spent)<select id="mapAmount">${opts(guess(/amount|value/i))}</select></label>
-      <label class="field">Description<select id="mapNote">${opts(guess(/desc|name|payee|merchant|memo/i), true)}</select></label>
-      <label class="field">Category<select id="mapCat">${opts(guess(/categ/i), true)}</select></label>
-    </div>
-    <div class="actions"><button class="btn primary" id="mapGo">Preview import</button></div>`;
-  box.classList.remove("hidden");
-  document.getElementById("importPreview").classList.add("hidden");
-  document.getElementById("mapGo").onclick = () => {
-    const ix = (id) => Number(document.getElementById(id).value);
-    const [d, a, n, c] = [ix("mapDate"), ix("mapAmount"), ix("mapNote"), ix("mapCat")];
-    prepareImport(body.map((r) => {
-      const item = { date: parseDate(r[d]), amount: parsePence(r[a]), note: n >= 0 ? r[n] || "" : "", category: c >= 0 ? r[c] || "" : "", isPot: false };
-      // No transaction ID in a generic file, so build one from the row itself to detect re-imports.
-      item.importId = "csv:" + [item.date, item.amount, item.note].join("|");
-      return item;
-    }), "Columns mapped.");
-  };
-}
-
-function showImportError(msg) {
-  const box = document.getElementById("importPreview");
-  box.innerHTML = `<div class="notice warn">${esc(msg)}</div>`;
-  box.classList.remove("hidden");
-}
-
-// Decide, for each bank row, which of YOUR categories (and so which kind) it belongs to.
-// Bank amounts are from the account's point of view: −20 = money left the account.
-function classify(item) {
-  if (item.isPot) return { kind: "savings", name: "Savings", amount: -item.amount };
-  const bankCat = (item.category || "").trim().toLowerCase();
-  if (item.amount > 0 && (bankCat === "" || bankCat === "income" || bankCat === "transfers")) {
-    return { kind: "income", name: "Other income", amount: item.amount };
-  }
-  // Money out, or a refund (money back in a spending category) which reduces spending.
-  return { kind: "expense", name: prettyName(bankCat || "General"), amount: -item.amount };
-}
-
-function prepareImport(items, headline) {
-  document.getElementById("importMapping").classList.add("hidden");
-  const known = new Set(state.transactions.map((t) => t.importId).filter(Boolean));
-  const result = { add: [], dupes: 0, invalid: 0, newCats: new Map() };
-  for (const item of items) {
-    if (!item.date || item.amount == null) { result.invalid++; continue; }
-    if (item.amount === 0) continue;   // e.g. £0 card checks
-    if (known.has(item.importId)) { result.dupes++; continue; }
-    known.add(item.importId);
-    const c = classify(item);
-    let cat = state.categories.find((x) => x.kind === c.kind && x.name.toLowerCase() === c.name.toLowerCase())
-      || result.newCats.get(c.kind + ":" + c.name.toLowerCase());
-    if (!cat) { cat = { id: newId(), name: c.name, kind: c.kind }; result.newCats.set(c.kind + ":" + c.name.toLowerCase(), cat); }
-    result.add.push({ id: newId(), date: item.date, amount: c.amount, categoryId: cat.id, note: item.note.slice(0, 200), importId: item.importId });
-  }
-  pendingImport = result;
-  const box = document.getElementById("importPreview");
-  const byKind = { income: 0, expense: 0, savings: 0 };
-  const cats = new Map([...state.categories, ...result.newCats.values()].map((c) => [c.id, c]));
-  for (const t of result.add) byKind[cats.get(t.categoryId).kind]++;
-  const months = [...new Set(result.add.map((t) => monthOf(t.date)))].sort();
-  box.innerHTML = `
-    <div class="notice">${esc(headline)}</div>
-    <ul class="facts">
-      <li><strong>${result.add.length}</strong> new transactions to add (${byKind.expense} spending, ${byKind.income} income, ${byKind.savings} savings)
-        ${months.length ? `from ${esc(monthName(months[0]))} to ${esc(monthName(months[months.length - 1]))}` : ""}</li>
-      ${result.dupes ? `<li>${result.dupes} already imported — will be skipped</li>` : ""}
-      ${result.invalid ? `<li>${result.invalid} rows couldn't be read (missing date or amount) — will be skipped</li>` : ""}
-      ${result.newCats.size ? `<li>New categories to create: ${[...result.newCats.values()].map((c) => esc(c.name)).join(", ")}</li>` : ""}
-    </ul>
-    <div class="actions">
-      <button class="btn primary" id="importGo" ${result.add.length ? "" : "disabled"}>Import ${result.add.length} transactions</button>
-      <button class="btn" id="importCancel">Cancel</button>
-    </div>`;
-  box.classList.remove("hidden");
-  document.getElementById("importGo").onclick = commitImport;
-  document.getElementById("importCancel").onclick = () => { pendingImport = null; box.classList.add("hidden"); };
-}
-
-function commitImport() {
-  if (!pendingImport) return;
-  state.categories.push(...[...pendingImport.newCats.values()].map(touch));
-  state.transactions.push(...pendingImport.add.map((t) => touch(sync ? { ...t, by: sync.name } : t)));
-  const latest = pendingImport.add.map((t) => t.date).sort().pop();
-  const n = pendingImport.add.length;
-  pendingImport = null;
-  save();
-  if (latest) currentMonth = monthOf(latest);
-  document.getElementById("importPreview").innerHTML = `<div class="notice">Imported ${n} transactions. Showing ${esc(monthName(currentMonth))}.</div>`;
-  renderAll();
-}
-
+window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (currentTab === "home") drawHomeCharts(); }, 150); });
 
 /* =========================================================================
    7. EVENT HANDLERS — what happens when you tap or type.
    ========================================================================= */
-const TITLES = { summary: "Summary", activity: "Activity", categories: "Categories", settings: "Settings" };
+const TITLES = { home: "Home", activity: "Activity", bills: "Bills", vouchers: "Vouchers", settings: "Settings" };
+const ADD_LABEL = { home: "Add expense", activity: "Add expense", bills: "Add bill", vouchers: "Add voucher" };
 
 function showTab(tab) {
   currentTab = tab;
   for (const b of document.querySelectorAll(".tabbar button")) b.setAttribute("aria-selected", b.dataset.tab === tab);
   for (const s of document.querySelectorAll(".screen")) s.classList.toggle("hidden", s.id !== "tab-" + tab);
   document.getElementById("screenTitle").textContent = TITLES[tab];
-  document.getElementById("monthSwitch").classList.toggle("hidden", tab !== "summary" && tab !== "activity");
+  document.getElementById("periodBox").classList.toggle("hidden", !["home", "activity", "bills"].includes(tab));
+  document.getElementById("modeSeg").classList.toggle("hidden", tab === "bills");
   const add = document.getElementById("addBtn");
   add.classList.toggle("hidden", tab === "settings");
-  add.setAttribute("aria-label", tab === "categories" ? "Add category" : "Add transaction");
+  add.setAttribute("aria-label", ADD_LABEL[tab] || "Add");
   hideTip();
   window.scrollTo(0, 0);
-  if (tab === "summary") { drawCategoryChart(); drawTrendChart(); }   // charts need a visible width
+  renderAll();
 }
 
 document.querySelector(".tabbar").addEventListener("click", (e) => {
@@ -1295,42 +1701,63 @@ document.querySelector(".tabbar").addEventListener("click", (e) => {
   if (btn) showTab(btn.dataset.tab);
 });
 
-document.getElementById("prevMonth").onclick = () => { currentMonth = addMonths(currentMonth, -1); renderAll(); };
-document.getElementById("nextMonth").onclick = () => { currentMonth = addMonths(currentMonth, 1); renderAll(); };
-document.getElementById("thisMonth").onclick = () => { currentMonth = monthOf(todayISO()); renderAll(); };
-
-document.getElementById("addBtn").onclick = () =>
-  currentTab === "categories" ? openCategorySheet() : openTransactionSheet();
-
-document.getElementById("txList").addEventListener("click", (e) => {
-  const row = e.target.closest("[data-edit]");
-  if (row) return openTransactionSheet(row.dataset.edit);
-  if (e.target.closest('[data-action="add"]')) openTransactionSheet();
+document.getElementById("modeSeg").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-mode]");
+  if (!b) return;
+  mode = b.dataset.mode;
+  // Keep the two views lined up: the month of the chosen week, or the current week of the chosen month.
+  if (mode === "month") month = monthOf(week); else if (monthOf(week) !== month) week = weekOf(month + "-01");
+  renderAll();
 });
+function stepPeriod(n) {
+  const p = period();
+  if (p.type === "week") week = addDays(week, 7 * n); else month = addMonths(month, n);
+  renderAll();
+}
+document.getElementById("prevPeriod").onclick = () => stepPeriod(-1);
+document.getElementById("nextPeriod").onclick = () => stepPeriod(1);
+document.getElementById("thisPeriod").onclick = () => { week = weekOf(todayISO()); month = monthOf(todayISO()); renderAll(); };
 
-document.getElementById("catList").addEventListener("click", (e) => {
-  const row = e.target.closest("[data-cat]");
-  if (row) openCategorySheet(row.dataset.cat);
+document.getElementById("addBtn").onclick = () => {
+  if (currentTab === "bills") openBillSheet();
+  else if (currentTab === "vouchers") openVoucherSheet();
+  else openTransactionSheet();
+};
+
+// One listener for every tappable row and button inside the screens.
+document.getElementById("app").addEventListener("click", (e) => {
+  const el = e.target.closest("[data-edit],[data-bill],[data-pay],[data-voucher],[data-cat],[data-action],[data-go]");
+  if (!el) return;
+  const d = el.dataset;
+  if (d.edit) openTransactionSheet(d.edit);
+  else if (d.pay) payBill(d.pay);
+  else if (d.bill) openBillSheet(d.bill);
+  else if (d.voucher) openVoucherSheet(d.voucher);
+  else if (d.cat) openCategorySheet(d.cat);
+  else if (d.go) showTab(d.go);
+  else if (d.action === "add") openTransactionSheet();
+  else if (d.action === "logshop") openLogShopSheet();
+  else if (d.action === "addbill") openBillSheet();
+  else if (d.action === "addvoucher") openVoucherSheet();
+  else if (d.action === "addcat") openCategorySheet();
 });
 
 // --- Settings ---
-const goalInput = document.getElementById("goalInput");
-function saveGoal() {
-  const v = goalInput.value.trim();
-  const pence = v === "" ? 0 : parsePence(v);
-  if (pence == null || pence < 0) { alert("Please enter an amount, like 300"); goalInput.value = ""; return; }
-  state.settings.savingsGoal = pence;
-  touch(state.settings);
-  save(); renderAll();
+for (const pid of ["p1", "p2"]) {
+  const el = document.getElementById(pid === "p1" ? "nameP1" : "nameP2");
+  el.addEventListener("change", () => {
+    const name = el.value.trim();
+    if (!name) { el.value = state.settings.people[pid]; return; }
+    state.settings.people[pid] = name;
+    touch(state.settings);
+    save(); renderAll();
+  });
+  el.addEventListener("keydown", (e) => { if (e.key === "Enter") el.blur(); });
 }
-goalInput.addEventListener("change", saveGoal);
-goalInput.addEventListener("keydown", (e) => { if (e.key === "Enter") goalInput.blur(); });
-goalInput.addEventListener("focus", () => { const g = state.settings.savingsGoal; goalInput.value = g ? (g / 100).toFixed(2) : ""; });
-goalInput.addEventListener("blur", () => renderSettings());
 
 document.getElementById("exportBtn").onclick = async () => {
   // Builds the file in memory and hands it to your browser's download — no server involved.
-  const name = `pocket-ledger-backup-${todayISO()}.json`;
+  const name = `joint-finance-backup-${todayISO()}.json`;
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   // On phones, downloads from a home-screen app are unreliable, so open the share sheet
   // instead ("Save to Files"). The file goes only where you choose to send it.
@@ -1351,25 +1778,26 @@ document.getElementById("restoreFile").addEventListener("change", async (e) => {
   e.target.value = "";
   if (!file) return;
   try {
-    const data = JSON.parse(await file.text());
+    let data = JSON.parse(await file.text());
+    if (data.version === 1 && Array.isArray(data.transactions)) data = migrateFromV1(data);   // a Pocket Ledger backup
     if (data.version !== SCHEMA_VERSION || !Array.isArray(data.transactions) || !Array.isArray(data.categories)) throw new Error();
-    const warn = sync ? " This also replaces the shared ledger for everyone you share with." : "";
-    if (!confirm(`Replace everything currently stored with this backup (${data.transactions.length} transactions)?${warn}`)) return;
+    const warn = sync ? " This also replaces the shared ledger for both of you." : "";
+    if (!confirm(`Replace everything currently stored with this backup (${data.transactions.length} entries)?${warn}`)) return;
     const before = localRecords();
-    data.deleted = data.deleted || {};
-    state = data;
-    for (const r of [...state.transactions, ...state.categories, state.settings]) touch(r);
+    state = withDefaults(data);
+    // Stamp everything as new so the restore wins on the other phone too.
+    for (const r of [...state.transactions, ...state.categories, ...state.bills, ...state.vouchers, state.settings]) touch(r);
     const after = localRecords();
     for (const id of before.keys()) if (!after.has(id)) state.deleted[id] = Date.now();
     save(); renderAll();
   } catch (_) {
-    alert("That file isn't a Pocket Ledger backup.");
+    alert("That file isn't a Joint Finance Tracker or Pocket Ledger backup.");
   }
 });
 
 document.getElementById("wipeBtn").onclick = () => {
-  const extra = sync ? " This also stops sharing on this phone. The shared copy is not deleted for others." : "";
-  if (!confirm("Erase all transactions, categories and settings from this device? This can't be undone unless you have a backup." + extra)) return;
+  const extra = sync ? " This also stops sharing on this phone. The shared copy is not deleted for the other person." : "";
+  if (!confirm("Erase everything from this device? This can't be undone unless you have a backup." + extra)) return;
   if (sync) leaveLedger();
   try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
   state = defaultState();
@@ -1394,11 +1822,11 @@ document.getElementById("wipeBtn").onclick = () => {
    ========================================================================= */
 const SYNC_URL = "https://YOUR-PROJECT.supabase.co";   // set when the server is created
 const SYNC_API_KEY = "YOUR-PUBLISHABLE-KEY";           // public by design: it only allows calling pl_pull / pl_push
-const SYNC_STORE = "pocketLedger.sync.v1";
+const SYNC_STORE = "jointFinance.sync.v2";
 const syncConfigured = !SYNC_URL.includes("YOUR-PROJECT");
 
 // What this phone remembers about sharing (kept apart from the ledger data):
-// { ledgerId, secret, name, lastSeq, synced: { recordId: updatedAt }, lastSyncAt }
+// { ledgerId, secret, me: "p1"|"p2", lastSeq, synced: { recordId: updatedAt }, lastSyncAt }
 let sync = null;
 let syncKey = null;          // the unlocked CryptoKey, kept only in memory
 let syncStatus = "";
@@ -1409,7 +1837,7 @@ function saveSyncInfo() {
   try { sync ? localStorage.setItem(SYNC_STORE, JSON.stringify(sync)) : localStorage.removeItem(SYNC_STORE); } catch (_) {}
 }
 
-function addedByOther(tx) { return Boolean(sync && tx.by && tx.by !== sync.name); }
+function addedByOther(tx) { return Boolean(sync && tx.by && tx.by !== sync.me); }
 
 // ---- Codes ----
 const B32 = "abcdefghijklmnopqrstuvwxyz234567";
@@ -1423,9 +1851,9 @@ function randomCode() {   // 16 random bytes = 128 bits, written as 26 letters/d
   if (bits > 0) out += B32[(value << (5 - bits)) & 31];
   return out;
 }
-const inviteCode = () => `pl-${sync.ledgerId}-${sync.secret}`;
+const inviteCode = () => `jf-${sync.ledgerId}-${sync.secret}`;
 function parseInvite(text) {
-  const m = String(text).toLowerCase().replace(/\s+/g, "").match(/^pl-([a-z2-7]{26})-([a-z2-7]{26})$/);
+  const m = String(text).toLowerCase().replace(/\s+/g, "").match(/^jf-([a-z2-7]{26})-([a-z2-7]{26})$/);
   return m ? { ledgerId: m[1], secret: m[2] } : null;
 }
 
@@ -1439,7 +1867,7 @@ const fromB64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 async function deriveKey(ledgerId, secret) {
   const base = await crypto.subtle.importKey("raw", enc.encode(secret), "HKDF", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
-    { name: "HKDF", hash: "SHA-256", salt: enc.encode(ledgerId), info: enc.encode("pocket-ledger sync v1") },
+    { name: "HKDF", hash: "SHA-256", salt: enc.encode(ledgerId), info: enc.encode("joint-finance sync v2") },
     base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
 }
 // The record ID is mixed in as "additional data", so the server can't swap
@@ -1485,6 +1913,8 @@ function localRecords() {
   const m = new Map();
   for (const c of state.categories) m.set("cat:" + c.id, { updatedAt: c.updatedAt || 1, value: c });
   for (const t of state.transactions) m.set("tx:" + t.id, { updatedAt: t.updatedAt || 1, value: t });
+  for (const b of state.bills) m.set("bill:" + b.id, { updatedAt: b.updatedAt || 1, value: b });
+  for (const v of state.vouchers) m.set("vch:" + v.id, { updatedAt: v.updatedAt || 1, value: v });
   m.set("settings", { updatedAt: state.settings.updatedAt || 1, value: state.settings });
   for (const [id, at] of Object.entries(state.deleted || {})) {
     if (!m.has(id) || m.get(id).updatedAt < at) m.set(id, { updatedAt: at, deleted: true });
@@ -1495,10 +1925,14 @@ function localRecords() {
 // Only accept records that look right, so a damaged record can't break the app.
 function validRecord(kind, v) {
   if (!v || typeof v !== "object") return false;
-  if (kind === "tx") return typeof v.id === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v.date) && Number.isInteger(v.amount)
-    && typeof v.categoryId === "string" && typeof (v.note ?? "") === "string";
-  if (kind === "cat") return typeof v.id === "string" && typeof v.name === "string" && ["expense", "income", "savings"].includes(v.kind);
-  if (kind === "settings") return Number.isInteger(v.savingsGoal ?? 0);
+  const date = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+  const split = (x) => x == null || (typeof x === "object" && ["equal", "p1", "p2", "amount", "percent"].includes(x.mode) && (x.p1 == null || Number.isFinite(x.p1)));
+  if (kind === "tx") return date(v.date) && Number.isInteger(v.amount) && typeof v.categoryId === "string"
+    && typeof (v.note ?? "") === "string" && split(v.split) && Number.isInteger(v.voucher ?? 0) && [undefined, "p1", "p2", "other"].includes(v.from);
+  if (kind === "cat") return typeof v.name === "string" && ["everyday", "bills", "income"].includes(v.group);
+  if (kind === "bill") return typeof v.name === "string" && Number.isInteger(v.amount) && Number.isInteger(v.dueDay) && split(v.split);
+  if (kind === "vch") return date(v.date) && Number.isInteger(v.value) && Number.isInteger(v.cost);
+  if (kind === "settings") return !!v.people && typeof v.people.p1 === "string" && typeof v.people.p2 === "string";
   return false;
 }
 
@@ -1506,7 +1940,8 @@ function applyRemote(target, id, updatedAt, deleted, value) {
   const sep = id.indexOf(":");
   const kind = id === "settings" ? "settings" : id.slice(0, sep);
   const rid = id.slice(sep + 1);
-  const list = kind === "tx" ? target.transactions : kind === "cat" ? target.categories : null;
+  const list = { tx: target.transactions, cat: target.categories, bill: target.bills, vch: target.vouchers }[kind] || null;
+  if (kind !== "settings" && !list) return false;
   if (deleted) {
     if (list) { const i = list.findIndex((r) => r.id === rid); if (i >= 0) list.splice(i, 1); }
     target.deleted[id] = updatedAt;
@@ -1614,7 +2049,7 @@ function renderSharing() {
     box.innerHTML = `
       <button class="row action" data-share="start"><span class="grow">Start Sharing…</span>${ICONS.chevron}</button>
       <button class="row action" data-share="join"><span class="grow">Join a Shared Ledger…</span>${ICONS.chevron}</button>`;
-    foot.textContent = "Share one ledger with a partner. Both phones see and change the same transactions. Everything is encrypted on your phone before it is sent.";
+    foot.textContent = "Share this tracker between both your phones. Either of you can add and change things. Everything is encrypted on the phone before it is sent.";
     stay.textContent = "Saved in this browser's storage. There is no account.";
     sentT.textContent = "Never sent anywhere";
     sent.textContent = "A security policy makes the browser block every network request from this app, except to the sync server, which is only used if you turn on sharing.";
@@ -1624,10 +2059,10 @@ function renderSharing() {
   box.innerHTML = `
     <div class="row"><div class="grow"><div class="title">Shared ledger</div><div class="sub" role="status">${esc(status)}</div></div>
       <button class="icon-btn" data-share="now">Sync Now</button></div>
-    <div class="row"><div class="grow title">Your name</div><span class="trail">${esc(sync.name)}</span></div>
+    <div class="row"><div class="grow title">This phone is</div><span class="trail">${esc(personName(sync.me))}</span></div>
     <button class="row action" data-share="invite"><span class="grow">Invite Someone…</span>${ICONS.chevron}</button>
     <button class="row destructive" data-share="leave">Stop Sharing on This Phone</button>`;
-  foot.textContent = "Changes sync within about 20 seconds while the app is open. Your name shows on transactions you add, so you can tell who added what.";
+  foot.textContent = "Changes sync within about 20 seconds while the app is open. Entries show who added them.";
   stay.textContent = "A full copy lives in this browser's storage on each phone that shares the ledger.";
   sentT.textContent = "Sent only encrypted";
   sent.textContent = "Before anything leaves this phone it is locked with your invite code. The sync server (Supabase) stores scrambled text it cannot read; it only sees when things changed.";
@@ -1651,32 +2086,33 @@ function openShareSheet(mode) {
   openSheet(`
     ${sheetBar(join ? "Join Shared Ledger" : "Start Sharing", join ? "Join" : "Start")}
     <div class="group" style="margin-top:12px">
-      <div class="field-row"><label for="shareName">Your name</label><input id="shareName" maxlength="30" placeholder="e.g. Lucas" autocomplete="given-name"></div>
-      ${join ? `<div class="field-row"><label for="shareCode">Invite code</label><input id="shareCode" placeholder="pl-…" autocomplete="off" autocapitalize="off" spellcheck="false"></div>` : ""}
+      ${join ? `<div class="field-row"><label for="shareCode">Invite code</label><input id="shareCode" placeholder="jf-…" autocomplete="off" autocapitalize="off" spellcheck="false"></div>` : ""}
     </div>
+    <h2 class="section-header">Which one are you?</h2>
+    ${segmented("me", [["p1", personName("p1")], ["p2", personName("p2")]], join ? "p2" : "p1", "Which one are you")}
     <p class="section-footer">${join
       ? "Paste the invite code your partner sent you. <strong>The data on this phone will be replaced</strong> by the shared ledger, so download a backup first if you want to keep it."
-      : "Your current transactions, categories and goal become the shared ledger. Next you'll get an invite code to send your partner."}</p>
+      : "Everything on this phone becomes the shared ledger. Next you'll get an invite code to send your partner."}</p>
     <p class="section-footer" id="shareError" role="alert" style="color:var(--neg)"></p>
   `, () => {
-    const nameEl = document.getElementById("shareName");
     const codeEl = document.getElementById("shareCode");
     const confirmBtn = sheet.querySelector('[data-sheet="confirm"]');
-    const validate = () => { confirmBtn.disabled = !nameEl.value.trim() || (join && !parseInvite(codeEl.value)); };
+    let me = join ? "p2" : "p1";
+    onSegment("me", (v) => { me = v; });
+    const validate = () => { confirmBtn.disabled = join && !parseInvite(codeEl.value); };
     sheet.oninput = validate;
     validate();
-    nameEl.focus();
+    if (join) codeEl.focus();
     sheet.onclick = async (e) => {
       const act = e.target.closest("[data-sheet]");
       if (!act) return;
       if (act.dataset.sheet === "cancel") return closeSheet(true);
-      const name = nameEl.value.trim();
       const errEl = document.getElementById("shareError");
       confirmBtn.disabled = true;
       errEl.textContent = join ? "Connecting…" : "Setting up…";
       try {
-        if (join) await joinLedger(name, parseInvite(codeEl.value));
-        else await startLedger(name);
+        if (join) await joinLedger(me, parseInvite(codeEl.value));
+        else await startLedger(me);
         closeSheet(true);
         renderAll();
         if (!join) openInviteSheet();
@@ -1688,11 +2124,10 @@ function openShareSheet(mode) {
   });
 }
 
-async function startLedger(name) {
+async function startLedger(me) {
   const ledgerId = randomCode(), secret = randomCode();
   syncKey = await deriveKey(ledgerId, secret);
-  sync = { ledgerId, secret, name, lastSeq: 0, synced: {}, lastSyncAt: 0 };
-  for (const t of state.transactions) if (!t.by) { t.by = name; touch(t); }
+  sync = { ledgerId, secret, me, lastSeq: 0, synced: {}, lastSyncAt: 0 };
   save(true);
   saveSyncInfo();
   await syncNow();
@@ -1704,13 +2139,13 @@ async function startLedger(name) {
   startTimers();
 }
 
-async function joinLedger(name, code) {
+async function joinLedger(me, code) {
   const key = await deriveKey(code.ledgerId, code.secret);
   let rows;
   try { rows = await pullAll(code.ledgerId, 0); }
   catch (e) { throw new Error(e.fromServer ? "Sync problem: " + e.message : "Couldn't reach the sync server. Check your internet connection."); }
   if (!rows.length) throw new Error("No shared ledger was found for this code. Check it was copied in full.");
-  const fresh = { version: SCHEMA_VERSION, categories: [], transactions: [], settings: { savingsGoal: 0 }, deleted: {} };
+  const fresh = { version: SCHEMA_VERSION, categories: [], transactions: [], bills: [], vouchers: [], settings: defaultState().settings, deleted: {} };
   const synced = {};
   // Deleted-item markers aren't encrypted, so only an unlocked record proves the code is right.
   let unlocked = 0, lastSeq = 0;
@@ -1723,10 +2158,9 @@ async function joinLedger(name, code) {
   if (!unlocked) throw new Error("This invite code doesn't unlock the shared ledger. Ask your partner to send it again.");
   state = fresh;
   syncKey = key;
-  sync = { ...code, name, lastSeq, synced, lastSyncAt: Date.now() };
+  sync = { ...code, me, lastSeq, synced, lastSyncAt: Date.now() };
   save(true);
   saveSyncInfo();
-  if (state.transactions.length) currentMonth = monthOf(state.transactions.map((t) => t.date).sort().pop());
   startTimers();
 }
 
@@ -1772,6 +2206,10 @@ function openInviteSheet() {
 
 renderAll();
 showTab("summary");
+startSync();
+
+renderAll();
+showTab("home");
 startSync();
 </script>
 </body>
